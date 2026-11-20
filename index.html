@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Yara's Birthday Quest</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#2b1a10;font-family:'Fredoka',system-ui,sans-serif;color:#4a2c14;overscroll-behavior:none}
+#game{max-width:480px;margin:0 auto;height:100vh;height:100dvh;display:flex;flex-direction:column;position:relative;overflow:hidden;background:#fdf0d5}
+#game.shake{animation:shake .35s}
+@keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+#hud{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;font-weight:600;font-size:15px;min-height:46px;background:#fff8ea;border-bottom:3px solid #4a2c14;z-index:3}
+#hud .right{display:flex;align-items:center}
+#strings b{display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%;margin-left:3px;background:#f1dcb8;color:#b59a74;font-size:12px;transition:.3s}
+#strings b.on{background:#f59e2b;color:#fff;transform:scale(1.12)}
+#muteBtn{font-family:inherit;font-size:14px;border:2px solid #4a2c14;border-radius:12px;background:#fff;padding:3px 6px;margin-left:6px;cursor:pointer}
+#bagBtn{font-family:inherit;font-weight:700;font-size:14px;border:2px solid #4a2c14;border-radius:12px;background:#ffcc33;padding:3px 8px;margin-left:8px;cursor:pointer;color:#4a2c14}
+#art{flex:1;position:relative;overflow:hidden;min-height:0}
+#bg{position:absolute;inset:0;z-index:0}
+#bg svg{width:100%;height:100%;display:block}
+#stage{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center}
+#box{margin:0 10px 12px;padding:14px 16px 18px;background:#fff;border:3px solid #4a2c14;border-radius:18px;min-height:132px;position:relative;box-shadow:0 4px 0 #4a2c14;cursor:pointer;user-select:none;-webkit-user-select:none;z-index:3}
+#boxwrap{background:#fff8ea;padding-top:10px;border-top:3px solid #4a2c14;z-index:3}
+#who{font-weight:700;color:#e07b12;font-size:15px;margin-bottom:4px;min-height:18px}
+#text{font-size:18px;line-height:1.4}
+#more{position:absolute;right:14px;bottom:6px;font-size:14px;opacity:0}
+#box.ready #more{opacity:1;animation:bob 1s infinite}
+@keyframes bob{50%{transform:translateY(3px)}}
+#choices{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.btn{font-family:inherit;font-size:17px;font-weight:600;padding:12px 14px;border-radius:14px;border:3px solid #4a2c14;background:#ffcc33;color:#4a2c14;box-shadow:0 3px 0 #4a2c14;cursor:pointer;touch-action:manipulation}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 #4a2c14}
+.btn.alt{background:#fff}
+.btn.sm{font-size:15px;padding:8px 10px;border-width:2px;box-shadow:0 2px 0 #4a2c14}
+.btn:disabled{opacity:.45}
+#toast{position:absolute;left:50%;top:58px;transform:translateX(-50%) translateY(-16px);background:#4a2c14;color:#fff;padding:8px 14px;border-radius:12px;font-size:15px;opacity:0;transition:.25s;pointer-events:none;width:max-content;max-width:90%;text-align:center;z-index:30}
+#toast.show{opacity:1;transform:translateX(-50%)}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:40;width:100%;height:100%}
+.overlay{position:absolute;inset:0;background:rgba(40,20,5,.6);display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
+.overlay.show{display:flex}
+.popcard{background:#fff;border:3px solid #4a2c14;border-radius:22px;box-shadow:0 5px 0 #4a2c14;padding:18px;text-align:center;max-width:340px;width:100%;animation:pop .5s cubic-bezier(.3,1.6,.5,1)}
+.popcard .gicon{font-size:76px;line-height:1.1;animation:float 2.5s ease-in-out infinite}
+.popcard .glabel{font-size:13px;letter-spacing:2px;text-transform:uppercase;opacity:.7}
+.popcard h3{margin:4px 0 6px;color:#e07b12;font-size:22px}
+.popcard p{margin:0 0 14px;font-size:16px;line-height:1.4}
+.baglist{display:flex;flex-direction:column;gap:8px;text-align:left;max-height:56vh;overflow:auto;margin:10px 0}
+.bagitem{display:flex;gap:10px;align-items:center;border:2px solid #f1dcb8;border-radius:12px;padding:6px 8px;font-size:14px}
+.bagitem b{font-size:30px;min-width:38px;text-align:center}
+.bagitem.locked{opacity:.35}
+.scene{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;height:100%;text-align:center;padding:10px}
+.panel{background:rgba(255,255,255,.94);border:3px solid #4a2c14;border-radius:18px;box-shadow:0 4px 0 #4a2c14;padding:12px;display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;max-width:400px}
+.float{animation:float 3s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-8px)}}
+h1.title{margin:4px 0 0;font-size:32px;line-height:1.1;color:#e07b12;text-shadow:0 2px 0 #fff}
+.sub{font-size:16px;font-weight:500}
+.big{font-size:56px;line-height:1}
+.pair{display:flex;align-items:flex-end;justify-content:center;gap:4px}
+.wcard{background:rgba(255,255,255,.94);border:3px solid #4a2c14;border-radius:22px;box-shadow:0 5px 0 #4a2c14;padding:18px 22px;max-width:320px;animation:pop .6s cubic-bezier(.3,1.6,.5,1)}
+.wnum{font-size:13px;letter-spacing:2px;text-transform:uppercase;opacity:.7}
+.wemoji{font-size:64px;line-height:1.2}
+.wname{font-size:27px;font-weight:700;color:#e07b12;line-height:1.1}
+.wtag{font-size:16px;margin-top:6px}
+@keyframes pop{from{transform:scale(.6);opacity:0}}
+canvas.play{width:100%;height:100%;display:block;touch-action:none}
+.goal{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:#fff;border:2px solid #4a2c14;border-radius:12px;padding:4px 12px;font-weight:600;font-size:15px;z-index:2;white-space:nowrap}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+.step{display:flex;align-items:center;gap:8px;font-size:16px;padding:10px}
+.step span{font-size:24px}
+.step.done{background:#c8ecb0}
+.pot{font-size:60px;line-height:1;transition:.3s}
+.progress{min-height:22px;font-size:16px}
+.sname{font-size:21px;font-weight:700}
+.sname small{font-size:15px;opacity:.7;font-weight:500}
+.qmeta{font-size:14px;opacity:.85}
+.meter{position:relative;width:100%;max-width:340px;height:40px;background:#fff;border:3px solid #4a2c14;border-radius:14px;overflow:hidden}
+.meter .zone{position:absolute;left:47.5%;width:5%;top:0;bottom:0;background:#c8ecb0}
+.meter .needle{position:absolute;top:4px;bottom:4px;width:6px;margin-left:-3px;background:#e0442b;border-radius:3px;transition:left .08s}
+.meter .needle.ok{background:#3c9a3c}
+.meter span{position:absolute;bottom:2px;font-size:12px;opacity:.6}
+.meter .lo{left:8px}.meter .hi{right:8px}
+input[type=range]{width:100%;max-width:340px;height:34px;accent-color:#f59e2b}
+.row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.status{min-height:22px;font-weight:600}
+.opts{display:grid;gap:6px;width:100%}
+.opt{font-size:15px;padding:10px 4px}
+.opt.lit{background:#ffcc33}
+.opt.right{background:#c8ecb0}
+.opt.bad{background:#f6b0a5}
+.kb{position:relative;width:100%;height:140px;user-select:none}
+.kb .w{position:absolute;bottom:0;height:100%;width:12.5%;background:#fff;border:2px solid #4a2c14;border-radius:0 0 8px 8px;font-size:12px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;cursor:pointer;touch-action:manipulation}
+.kb .b{position:absolute;top:0;height:60%;width:7.5%;background:#2b1a10;border-radius:0 0 6px 6px;z-index:2;cursor:pointer;touch-action:manipulation}
+.kb .on{background:#ffcc33 !important}
+.slots{display:flex;gap:6px;justify-content:center;min-height:28px}
+.slots i{width:24px;height:24px;border-radius:50%;border:2px solid #4a2c14;background:#fff}
+.slots i.f{background:#f59e2b}
+.slots.ok i{background:#6abf4b}
+.tapbtn{width:150px;height:150px;border-radius:50%;font-size:28px}
+.tapbtn.pulse{animation:pulse .15s}
+@keyframes pulse{50%{transform:scale(.93)}}
+.dots{font-size:20px;letter-spacing:4px;min-height:26px}
+.field{position:relative;width:100%;height:100%}
+.flower{position:absolute;transform:translateX(-50%);cursor:pointer;touch-action:manipulation;z-index:2}
+.flower svg{display:block;overflow:visible}
+.flower .petals{transform:scale(0);transform-box:fill-box;transform-origin:center;transition:transform .7s cubic-bezier(.3,1.7,.5,1)}
+.flower .center{opacity:0;transition:.4s}
+.flower .bud{transition:.3s}
+.flower.open .petals{transform:scale(1)}
+.flower.open .center{opacity:1}
+.flower.open .bud{opacity:0}
+.flower.ping svg{animation:ping .3s}
+@keyframes ping{50%{transform:scale(1.12)}}
+.flower.hint svg{animation:sway .5s ease-in-out infinite;transform-origin:50% 100%}
+.flower.dance svg{animation:sway 1.2s ease-in-out infinite;transform-origin:50% 100%}
+@keyframes sway{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+.heroic{position:absolute;left:46%;bottom:5%;transform:translateX(-50%);z-index:3}
+.beach{position:absolute;left:0;right:0;bottom:0;height:13%;background:linear-gradient(#2a5d8a 0 42%,#cdb37c 42%);z-index:1}
+.piano{position:absolute;left:82%;bottom:9%;font-size:50px;transform:translateX(-50%) scale(0);transition:transform .8s cubic-bezier(.3,1.7,.5,1);z-index:3}
+.piano.show{transform:translateX(-50%) scale(1)}
+.cabin{position:absolute;left:13%;bottom:10%;transform:translateX(-50%) scale(0);transform-origin:50% 100%;transition:transform .8s cubic-bezier(.3,1.7,.5,1);z-index:2}
+.cabin.show{transform:translateX(-50%) scale(1)}
+.cabin.show rect[fill='#ffd56b']{animation:glowwin 2.4s ease-in-out infinite}
+@keyframes glowwin{50%{fill:#fff1a8}}
+.cabin.talking svg{animation:float 1.6s ease-in-out infinite;filter:drop-shadow(0 0 10px #ffd56b)}
+.cardwrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:10px;background:rgba(13,24,56,.28);z-index:8}
+.cardwrap .card{max-height:100%}
+#voiceBtn .win{transition:fill .3s}
+#voiceBtn.live .win{animation:glowwin 1.2s ease-in-out infinite}
+.pulse-btn{animation:pulse 1.4s ease-in-out infinite}
+.giftrow{position:absolute;left:0;right:0;top:60%;display:flex;justify-content:center;gap:6px;z-index:3;pointer-events:none}
+.giftrow span{font-size:30px;transform:scale(0);transition:transform .5s cubic-bezier(.3,1.7,.5,1);filter:drop-shadow(0 2px 0 rgba(0,0,0,.25))}
+.giftrow span.in{transform:scale(1);animation:float 2.4s ease-in-out infinite}
+.giftrow span.glow,.piano.glow{transform:scale(1.7) !important;filter:drop-shadow(0 0 10px #ffd84a) drop-shadow(0 0 4px #fff);animation:none;z-index:5}
+.giftrow span.gone,.piano.gone{transform:scale(0) !important;opacity:0;transition:transform .6s ease-in,opacity .6s}
+.heroic svg{transition:filter .6s}
+.card{background:#fff;border:3px solid #4a2c14;border-radius:20px;box-shadow:0 5px 0 #4a2c14;padding:14px 16px 12px;max-width:380px;width:94%;max-height:100%;overflow:auto;animation:pop .6s cubic-bezier(.3,1.6,.5,1)}
+.card h2{margin:4px 0 8px;color:#e07b12;font-size:24px}
+.card p{white-space:normal;font-size:16px;line-height:1.38;margin:0 0 8px;text-align:left}
+#chapter{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;margin-right:6px}
+#strings{white-space:nowrap}
+@media (max-width:380px){#hud{padding:8px 8px;font-size:13px}#strings b{width:21px;height:21px;line-height:21px;font-size:11px;margin-left:2px}#bagBtn,#muteBtn{font-size:12px;padding:2px 5px;margin-left:4px}}
+@media (max-height:700px){.card p{font-size:15px;line-height:1.33}.card h2{font-size:21px}.cardtop{font-size:22px}}
+.cardtop{font-size:26px;letter-spacing:3px}
+.sig{text-align:right;font-weight:700}
+.label{background:rgba(255,255,255,.92);border:2px solid #4a2c14;border-radius:10px;padding:2px 8px;font-size:13px;font-weight:600}
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="hud"><span id="chapter">🪽🎶🌻</span><span class="right"><span id="strings"><b>G</b><b>D</b><b>A</b><b>E</b></span><button id="bagBtn">🎁 0</button><button id="muteBtn">🔊</button></span></div>
+  <div id="art"><div id="bg"></div><div id="stage"></div></div>
+  <div id="boxwrap"><div id="box"><div id="who"></div><div id="text"></div><div id="choices"></div><div id="more">▼</div></div></div>
+  <div id="toast"></div>
+  <div id="pop" class="overlay"></div>
+</div>
+<canvas id="confetti"></canvas>
+<script>
+/* ============ EDIT YOUR MESSAGE HERE ============ */
+const FINAL_MESSAGE = `Happy birthday to the kindest angel and cutest baby ever!
+
+Thank you for gracing my heart and probably the whole world with your benevolence.
+
+You are the sun and its warmth, the beach and its fun. And within you, you will find the strength to tame the world.
+
+My heart and soul will always continue to shine brighter because of you.`;
+const FROM = "Hattan";
+/* ================================================ */
+
+const $ = s => document.querySelector(s);
+const art = $('#stage'), box = $('#box'), who = $('#who'), text = $('#text'), choicesEl = $('#choices'), pop = $('#pop');
+const state = { sugar: 0, skips: 0, gifts: [], strings: [] };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const rand = n => Math.floor(Math.random() * n);
+const shuffle = a => { a = [...a]; for(let i = a.length - 1; i > 0; i--){ const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const has = g => state.gifts.includes(g);
+
+/* ---------- audio ---------- */
+let AC = null, BUS = null, VERB = null, MUTED = false;
+try{ MUTED = localStorage.getItem('yaraMuted') === '1'; }catch(e){}
+/* master chain: gentle compressor (keeps loud chords from clipping) + a soft room reverb */
+function buildGraph(ac){
+  const comp = ac.createDynamicsCompressor();
+  comp.threshold.value = -14; comp.knee.value = 10; comp.ratio.value = 8; comp.attack.value = 0.003; comp.release.value = 0.2;
+  const master = ac.createGain(); master.gain.value = MUTED ? 0 : 1;
+  master.connect(comp); comp.connect(ac.destination);
+  const len = Math.floor(ac.sampleRate * 1.2), ir = ac.createBuffer(2, len, ac.sampleRate);
+  for(let c = 0; c < 2; c++){ const d = ir.getChannelData(c); for(let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.5); }
+  const conv = ac.createConvolver(); conv.buffer = ir;
+  const pre = ac.createBiquadFilter(); pre.type = 'lowpass'; pre.frequency.value = 3200;
+  const wet = ac.createGain(); wet.gain.value = 0.32;
+  pre.connect(conv); conv.connect(wet); wet.connect(master);
+  BUS = master; VERB = pre;
+}
+function resetGraph(){ buildGraph(AC); }
+function audio(){
+  try{
+    if(!AC){ AC = new (window.AudioContext || window.webkitAudioContext)(); buildGraph(AC); }
+    if(AC.state === 'suspended') AC.resume();
+  }catch(e){}
+  return AC;
+}
+function setMuted(m){ MUTED = m; try{ localStorage.setItem('yaraMuted', m ? '1' : '0'); }catch(e){} if(BUS) BUS.gain.value = m ? 0 : 1; }
+function out(node, wet){
+  node.connect(BUS);
+  if(wet > 0){ const g = AC.createGain(); g.gain.value = wet; node.connect(g); g.connect(VERB); }
+}
+const NOTE = m => 440 * Math.pow(2, (m - 69) / 12);
+function envelope(g, t, dur, vol, a, r){
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(vol, t + a);
+  g.gain.setValueAtTime(vol, t + Math.max(a, dur - r));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.04);
+}
+/* violin: additive synthesis. Each harmonic (1/k, as in a bowed string's Helmholtz motion) is weighted by a
+   violin-body resonance curve (main air/body modes ~275-1150 Hz, "bridge hill" ~2.3-3.2 kHz), low notes have
+   their upper harmonics tamed (less roughness), plus a short bow-noise attack and a tiny slide into the note.
+   vib = vibrato depth as a fraction of frequency. Default 0.010 = about 35 cents peak-to-peak (nominal) at 6 Hz,
+   in line with measured violin vibrato (Fletcher & Sanders 1967). Ear tests use 0.002, tuning uses 0 (dead straight). */
+const BODY = [[275, 1.0, 60], [460, 0.8, 70], [540, 0.7, 80], [700, 0.45, 120], [900, 0.4, 150], [1150, 0.35, 200], [2300, 0.55, 500], [2750, 0.6, 500], [3200, 0.4, 500]];
+function bodyGain(f){
+  let s = 0.12;
+  BODY.forEach(([fr, a, bw]) => { s += a / (1 + Math.pow((f - fr) / (bw / 2), 2)); });
+  s *= 1 + 0.25 * Math.sin(f / 37) + 0.15 * Math.sin(f / 13.3);
+  return f > 4500 ? s * Math.exp(-(f - 4500) / 1500) : s;
+}
+function tone(freq, dur = 0.5, when = 0, vol = 0.16, vib = 0.010){
+  const ac = audio(); if(!ac) return;
+  const t = ac.currentTime + when;
+  const g = ac.createGain();
+  envelope(g, t, dur, vol * 1.45, Math.min(0.08, dur * 0.3), Math.min(0.16, dur * 0.35));
+  let vg = null;
+  if(vib > 0){
+    const lfo = ac.createOscillator(); lfo.frequency.value = 6.0;
+    vg = ac.createGain(); vg.gain.setValueAtTime(0, t); vg.gain.setValueAtTime(0, t + 0.12); vg.gain.linearRampToValueAtTime(vib, t + 0.45);
+    lfo.connect(vg); lfo.start(t); lfo.stop(t + dur + 0.2);
+  }
+  const slide = vib >= 0.004;
+  const N = Math.min(30, Math.floor(5000 / freq));
+  const amps = []; let norm = 0;
+  for(let k = 1; k <= N; k++){
+    const tame = freq < 300 ? (k > 5 ? Math.pow(5 / k, 1.8) : 1) : (k > 8 ? 8 / k : 1);
+    const a = (1 / k) * bodyGain(k * freq) * Math.exp(-Math.max(0, k * freq - 1800) / 2200) * tame;
+    amps.push(a); norm += a * a;
+  }
+  norm = Math.sqrt(norm);
+  for(let k = 1; k <= N; k++){
+    if(amps[k - 1] / norm < 0.015) continue;   /* inaudible partial: skip it to save CPU on phones */
+    const o = ac.createOscillator(); o.type = 'sine';
+    if(slide){ o.frequency.setValueAtTime(k * freq * Math.pow(2, -12 / 1200), t); o.frequency.exponentialRampToValueAtTime(k * freq, t + 0.05); }
+    else o.frequency.value = k * freq;
+    if(vg){ const m = ac.createGain(); m.gain.value = k * freq; vg.connect(m); m.connect(o.frequency); }
+    const ag = ac.createGain(); ag.gain.value = amps[k - 1] / norm;
+    o.connect(ag); ag.connect(g); o.start(t); o.stop(t + dur + 0.1);
+  }
+  if(vib > 0){
+    const nb = ac.createBuffer(1, Math.ceil(ac.sampleRate * Math.min(dur + 0.1, 0.6)), ac.sampleRate), d = nb.getChannelData(0);
+    for(let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const ns = ac.createBufferSource(); ns.buffer = nb;
+    const nf = ac.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 3000; nf.Q.value = 0.7;
+    const ng = ac.createGain(); ng.gain.setValueAtTime(0.12, t); ng.gain.exponentialRampToValueAtTime(0.02, t + 0.12);
+    ns.connect(nf); nf.connect(ng); ng.connect(g); ns.start(t); ns.stop(t + Math.min(dur + 0.1, 0.6));
+  }
+  out(g, vib > 0 ? 0.55 : 0.12);
+}
+/* Hattan's singing voice: a sawtooth through three vowel formants ("ah"), so it sounds sung, not buzzed */
+function voice(freq, dur = 0.4, when = 0, vib = 0.018){
+  const ac = audio(); if(!ac) return;
+  const t = ac.currentTime + when;
+  const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = freq;
+  const lfo = ac.createOscillator(); lfo.frequency.value = 6.3;
+  const vg = ac.createGain(); vg.gain.value = freq * vib;
+  lfo.connect(vg); vg.connect(o.frequency);
+  const g = ac.createGain();
+  envelope(g, t, dur, 0.8, 0.04, 0.08);
+  /* smoother, voice-like source (falls off above the 3rd harmonic) before the "ah" formants: much less rough */
+  const glot = ac.createBiquadFilter(); glot.type = 'lowpass'; glot.frequency.value = freq * 3; glot.Q.value = 0.5;
+  o.connect(glot);
+  [[720, 1.0, 7], [1150, 0.55, 9], [2550, 0.22, 11]].forEach(([f, amp, q]) => {
+    const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q;
+    const ag = ac.createGain(); ag.gain.value = amp * 1.15;
+    glot.connect(bp); bp.connect(ag); ag.connect(g);
+  });
+  const low = ac.createBiquadFilter(); low.type = 'lowpass'; low.frequency.value = 420;
+  const lg = ac.createGain(); lg.gain.value = 0.16; o.connect(low); low.connect(lg); lg.connect(g);
+  out(g, 0.35);
+  o.start(t); lfo.start(t); o.stop(t + dur + 0.1); lfo.stop(t + dur + 0.1);
+}
+/* soft harp/celesta-like pluck */
+function pluck(freq, vol = 0.22, when = 0){
+  const ac = audio(); if(!ac) return;
+  const t = ac.currentTime + when;
+  const g = ac.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol * 1.45, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0008, t + 1.0);
+  [[1, 'triangle', 1], [2, 'sine', 0.25]].forEach(([mult, type, amp]) => {
+    const o = ac.createOscillator(); o.type = type; o.frequency.value = freq * mult;
+    const ag = ac.createGain(); ag.gain.value = amp; o.connect(ag); ag.connect(g); o.start(t); o.stop(t + 1.05);
+  });
+  out(g, 0.4);
+}
+/* warm pad for the finale accompaniment */
+function pad(freq, dur, when = 0, vol = 0.05){
+  const ac = audio(); if(!ac) return;
+  const t = ac.currentTime + when;
+  const g = ac.createGain(); envelope(g, t, dur, vol, 0.18, 0.35);
+  const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1100;
+  [-4, 4].forEach(c => { const o = ac.createOscillator(); o.type = 'triangle'; o.frequency.value = freq * Math.pow(2, c / 1200); o.connect(lp); o.start(t); o.stop(t + dur + 0.1); });
+  lp.connect(g); out(g, 0.6);
+}
+/* woodblock-ish metronome tick (soft attack, so no hard click edge) */
+function click(when, accent){
+  const ac = audio(); if(!ac) return;
+  const t = ac.currentTime + when;
+  const o = ac.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(accent ? 1900 : 1500, t); o.frequency.exponentialRampToValueAtTime(accent ? 1300 : 1000, t + 0.05);
+  const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(accent ? 0.42 : 0.3, t + 0.002); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.07);
+  o.connect(g); out(g, 0); o.start(t); o.stop(t + 0.09);
+}
+function blip(){ const ac = audio(); if(!ac) return; const t = ac.currentTime; const o = ac.createOscillator(); o.type = 'sine'; o.frequency.value = 1050; const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.11, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.06); o.connect(g); out(g, 0); o.start(t); o.stop(t + 0.08); }
+/* gentle "bonk" for mistakes: falling sine, no harsh buzz */
+function buzz(){
+  const ac = audio(); if(!ac) return;
+  const t = ac.currentTime;
+  const o = ac.createOscillator(); o.type = 'triangle'; o.frequency.setValueAtTime(300, t); o.frequency.exponentialRampToValueAtTime(140, t + 0.2);
+  const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.32, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0005, t + 0.26);
+  o.connect(g); out(g, 0.1); o.start(t); o.stop(t + 0.3);
+}
+function sparkle(){ [72, 76, 79, 84, 88].forEach((m, i) => pluck(NOTE(m), 0.12, i * 0.07)); }
+
+/* ---------- dialogue engine ---------- */
+let typing = false, typeTimer = null, advance = null, finishType = null;
+function say(speaker, t){
+  return new Promise(res => {
+    who.textContent = speaker || '';
+    choicesEl.innerHTML = '';
+    box.classList.remove('ready');
+    const chars = Array.from(t);
+    let i = 0; typing = true; text.textContent = '';
+    clearInterval(typeTimer);
+    const done = () => {
+      clearInterval(typeTimer); typing = false; text.textContent = t;
+      box.classList.add('ready');
+      advance = () => { advance = null; box.classList.remove('ready'); res(); };
+    };
+    finishType = done;
+    typeTimer = setInterval(() => { i++; text.textContent = chars.slice(0, i).join(''); if(i >= chars.length) done(); }, 20);
+  });
+}
+box.addEventListener('click', () => {
+  if(VOICE.arm && VOICE.ok && !VOICE.unlocked) unlockVoice();
+  if(typing){ finishType && finishType(); return; }
+  if(advance){ blip(); advance(); }
+});
+async function talk(arr){ for(const [s, t] of arr) await say(s, t); }
+function choose(speaker, t, opts){
+  return new Promise(res => {
+    clearInterval(typeTimer); typing = false; advance = null;
+    who.textContent = speaker || ''; text.textContent = t; box.classList.remove('ready');
+    choicesEl.innerHTML = '';
+    opts.forEach((o, idx) => {
+      const b = document.createElement('button');
+      b.className = 'btn' + (idx ? ' alt' : ''); b.textContent = o;
+      b.onclick = e => { e.stopPropagation(); audio(); blip(); choicesEl.innerHTML = ''; res(idx); };
+      choicesEl.appendChild(b);
+    });
+  });
+}
+function info(t){ clearInterval(typeTimer); typing = false; advance = null; who.textContent = ''; text.textContent = t; choicesEl.innerHTML = ''; box.classList.remove('ready'); }
+let toastT;
+function toast(m){ const el = $('#toast'); el.textContent = m; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 1900); }
+function shake(){ const g = $('#game'); g.classList.remove('shake'); void g.offsetWidth; g.classList.add('shake'); }
+function setChapter(c){ $('#chapter').textContent = c; }
+const scene = inner => `<div class="scene">${inner}</div>`;
+const panel = inner => `<div class="scene"><div class="panel">${inner}</div></div>`;
+
+/* ---------- strings & gifts ---------- */
+function markString(s){
+  if(!state.strings.includes(s)) state.strings.push(s);
+  document.querySelectorAll('#strings b')[('GDAE').indexOf(s)].classList.add('on');
+}
+function collectString(s){
+  markString(s);
+  pluck(NOTE([55, 62, 69, 76]['GDAE'.indexOf(s)]), 0.3);
+  toast(`🎻 ${s} string found!`);
+}
+const GIFTS = {
+  brush:    { icon: '🖌️', name: 'Happy Little Paintbrush', from: 'the painting world', desc: 'Paints happy little clouds over any bad day. Comes with a free orange.' },
+  lantern:  { icon: '🏮', name: 'A Floating Lantern', from: 'the tower', desc: 'It lights itself every 20 November. Forever.' },
+  scale:    { icon: '🐉', name: 'A Dragon Scale', from: 'Berk', desc: 'Still warm. Perfect for cold practice rooms.' },
+  voucher:  { icon: '🎟️', name: 'In-Tune Song Voucher', from: 'Hattan', desc: 'Good for one perfectly in-tune song from Hattan. Valid: never. Redeemable: also never.' },
+  bow:      { icon: '🎀', name: 'A Fabulous Bow', from: 'Pony Land', desc: 'Couture by Rarity herself. Big enough for The Hair.' },
+  piano:    { icon: '🎹', name: 'A Piano. Her Very Own.', from: 'the jazz club', desc: 'So she can play every day. Being delivered to La La Lawn.' },
+  bracelet: { icon: '📿', name: 'Friendship Bracelet', from: 'the Eras stage', desc: 'The beads spell Y-A-R-A. Very era-appropriate.' }
+};
+const GIFT_ORDER = ['brush', 'lantern', 'scale', 'voucher', 'bow', 'piano', 'bracelet'];
+function updateBag(){ $('#bagBtn').textContent = `🎁 ${state.gifts.length}`; }
+function giveGift(k){
+  if(!has(k)) state.gifts.push(k);
+  updateBag();
+  const g = GIFTS[k];
+  sparkle(); confetti(1.5);
+  return new Promise(res => {
+    pop.innerHTML = `<div class="popcard"><div class="glabel">🎁 New gift · from ${g.from}</div><div class="gicon">${g.icon}</div><h3>${g.name}</h3><p>${g.desc}</p><button class="btn" id="popok">Yay 🎉</button></div>`;
+    pop.classList.add('show');
+    $('#popok').onclick = e => { e.stopPropagation(); blip(); pop.classList.remove('show'); res(); };
+  });
+}
+$('#bagBtn').onclick = () => {
+  blip();
+  pop.innerHTML = `<div class="popcard"><h3>🎁 Birthday gifts</h3><div class="baglist">${GIFT_ORDER.map(k => has(k)
+      ? `<div class="bagitem"><b>${GIFTS[k].icon}</b><div><strong>${GIFTS[k].name}</strong><br>${GIFTS[k].desc}</div></div>`
+      : `<div class="bagitem locked"><b>❔</b><div>Not found yet</div></div>`).join('')}</div><button class="btn alt" id="popok">Close</button></div>`;
+  pop.classList.add('show');
+  $('#popok').onclick = () => pop.classList.remove('show');
+};
+
+$('#muteBtn').textContent = MUTED ? '🔇' : '🔊';
+$('#muteBtn').onclick = () => { setMuted(!MUTED); $('#muteBtn').textContent = MUTED ? '🔇' : '🔊'; if(VOICE.el) VOICE.el.muted = MUTED; };
+
+/* ---------- optional private voice message ----------
+   If a file named voice.m4a / voice.mp3 / voice.wav / voice.ogg / voice.opus / voice.aac sits in the same folder
+   as this page, it plays from the cabin window in the finale. It is loaded as-is; nothing is changed. */
+const VOICE = { el: null, ok: false, arm: false, unlocked: false };
+(function(){
+  try{
+    const a = document.createElement('audio'); a.preload = 'auto';
+    ['m4a', 'mp3', 'wav', 'ogg', 'opus', 'aac'].forEach(ext => { const src = document.createElement('source'); src.src = 'voice.' + ext; a.appendChild(src); });
+    a.addEventListener('loadedmetadata', () => { VOICE.ok = true; });
+    a.addEventListener('canplay', () => { VOICE.ok = true; });
+    document.body.appendChild(a); a.load(); VOICE.el = a;
+  }catch(e){}
+})();
+/* phones only allow sound from a tap, so the first tap in the finale quietly "unlocks" the recording
+   (muted play + pause, nothing is heard); it can then start by itself when the card appears */
+function unlockVoice(){
+  const a = VOICE.el; if(!a || VOICE.unlocked) return;
+  VOICE.unlocked = true;
+  try{ a.muted = true; const pr = a.play(); const back = () => { a.pause(); a.currentTime = 0; a.muted = MUTED; };
+       if(pr && pr.then) pr.then(back).catch(() => { VOICE.unlocked = false; a.muted = MUTED; }); else back(); }catch(e){ VOICE.unlocked = false; }
+}
+/* Hattan's recording plays from the cabin window; the story waits until it has finished */
+function ctrlBtn(label, alt){ const b = document.createElement('button'); b.className = 'btn' + (alt ? ' alt' : ''); b.textContent = label; choicesEl.appendChild(b); return b; }
+async function listenAtWindow(){
+  const a = VOICE.el, cabin = art.querySelector('.cabin');
+  let isEnded = false;
+  const ended = new Promise(r => { a.onended = () => { isEnded = true; r(); }; a.onerror = () => { isEnded = true; r(); }; });
+  a.onplay = () => cabin.classList.add('talking');
+  a.onpause = () => cabin.classList.remove('talking');
+  try{ a.currentTime = 0; a.muted = MUTED; await a.play(); }catch(e){}
+  if(a.paused && !isEnded){
+    /* the phone blocked it from starting by itself: one tap starts it */
+    await new Promise(r => {
+      info('🏡 The window is glowing…');
+      const b = ctrlBtn('▶️ Listen at the window'); b.classList.add('pulse-btn');
+      b.onclick = e => { e.stopPropagation(); a.muted = MUTED; a.play().catch(() => {}); r(); };
+    });
+  }
+  await say('Yara', 'Okay. Now I\'m crying. 😭');
+  if(!isEnded){
+    await new Promise(res => {
+      const draw = () => {
+        if(isEnded) return;
+        info(a.paused ? '🏡 Paused.' : '🎶 Listening at the warm window…');
+        const pp = ctrlBtn(a.paused ? '▶️ Listen' : '⏸️ Pause');
+        pp.onclick = e => { e.stopPropagation(); if(a.paused){ a.muted = MUTED; a.play().catch(() => {}); } else a.pause(); };
+        if(a.paused){ const c = ctrlBtn('Continue →', true); c.onclick = e => { e.stopPropagation(); res(); }; }
+      };
+      a.onplay = () => { cabin.classList.add('talking'); draw(); };
+      a.onpause = () => { cabin.classList.remove('talking'); draw(); };
+      ended.then(res);
+      draw();
+    });
+  }
+  try{ a.pause(); a.currentTime = 0; }catch(e){}
+  a.onplay = a.onpause = a.onended = a.onerror = null;
+  cabin.classList.remove('talking');
+  info('');
+}
+
+/* ---------- save / resume ---------- */
+const SAVE = 'yaraBirthdayQuest_v3';
+function save(ch){ try{ localStorage.setItem(SAVE, JSON.stringify({ ch, sugar: state.sugar, skips: state.skips })); }catch(e){} }
+function load(){ try{ return JSON.parse(localStorage.getItem(SAVE) || 'null'); }catch(e){ return null; } }
+
+/* ---------- art ---------- */
+function hamster({w = 140, fur = '#e9a35b', tall = false, mic = false, violin = false, sleepy = false, wings = true, hair = true, bow = false} = {}){
+  const H = (tall ? 250 : 200) + (hair ? 26 : 0) + (bow ? 10 : 0);
+  const ry = tall ? 100 : 62, cy = H - (hair ? 94 : 70), top = cy - ry, bot = cy + ry;
+  const eyes = sleepy
+    ? `<path d="M72 ${top+44} q8 6 16 0 M112 ${top+44} q8 6 16 0" stroke="#2b1a10" stroke-width="4" fill="none" stroke-linecap="round"/>`
+    : `<circle cx="80" cy="${top+42}" r="7" fill="#2b1a10"/><circle cx="120" cy="${top+42}" r="7" fill="#2b1a10"/><circle cx="82" cy="${top+39}" r="2.4" fill="#fff"/><circle cx="122" cy="${top+39}" r="2.4" fill="#fff"/>`;
+  const lashes = hair && !sleepy ? `<path d="M74 ${top+38} l-7 -4 M73 ${top+42} l-8 -1 M126 ${top+38} l7 -4 M127 ${top+42} l8 -1" stroke="#2b1a10" stroke-width="2.2" stroke-linecap="round"/>` : '';
+  const wingSvg = wings ? `<g fill="#fff" stroke="#8fc3e6" stroke-width="3">
+      <ellipse cx="30" cy="${cy-18}" rx="30" ry="15" transform="rotate(-28 30 ${cy-18})"/>
+      <ellipse cx="170" cy="${cy-18}" rx="30" ry="15" transform="rotate(28 170 ${cy-18})"/>
+      <ellipse cx="38" cy="${cy}" rx="22" ry="10" transform="rotate(-12 38 ${cy})"/>
+      <ellipse cx="162" cy="${cy}" rx="22" ry="10" transform="rotate(12 162 ${cy})"/></g>` : '';
+  /* long wavy blonde hair: back layer falls past the feet, side-swept fringe on top */
+  const hairBack = hair ? `<path d="M100 ${top-8} C 30 ${top-6}, 24 ${top+50}, 30 ${cy+10} C 34 ${bot-10}, 14 ${bot}, 22 ${bot+18} C 30 ${bot+30}, 44 ${bot+16}, 50 ${bot+24} C 58 ${bot+32}, 68 ${bot+20}, 72 ${bot+12} L 128 ${bot+12} C 132 ${bot+20}, 142 ${bot+32}, 150 ${bot+24} C 156 ${bot+16}, 170 ${bot+30}, 178 ${bot+18} C 186 ${bot}, 166 ${bot-10}, 170 ${cy+10} C 176 ${top+50}, 170 ${top-6}, 100 ${top-8} Z" fill="#f7d36a" stroke="#d9a93a" stroke-width="3"/>
+      <path d="M38 ${top+44} C 30 ${cy}, 40 ${bot-6}, 30 ${bot+12} M162 ${top+44} C 170 ${cy}, 160 ${bot-6}, 170 ${bot+12} M48 ${top+30} C 42 ${cy-10}, 50 ${cy+30}, 44 ${bot}" stroke="#fff3b8" stroke-width="3" fill="none" stroke-linecap="round" opacity=".85"/>` : '';
+  const fringe = hair ? `<path d="M40 ${top+40} C 34 ${top-10}, 158 ${top-16}, 162 ${top+34} C 150 ${top+14}, 126 ${top+8}, 104 ${top+20} C 90 ${top+28}, 76 ${top+24}, 66 ${top+16} C 58 ${top+26}, 50 ${top+34}, 40 ${top+40} Z" fill="#f7d36a" stroke="#d9a93a" stroke-width="3"/>
+      <path d="M70 ${top+6} C 96 ${top-4}, 124 ${top+2}, 146 ${top+16}" stroke="#fff3b8" stroke-width="3" fill="none" stroke-linecap="round"/>` : '';
+  const bowSvg = bow ? `<g transform="translate(144 ${top-2}) rotate(18) scale(1.35)"><path d="M0 0 C -30 -24, -34 18, 0 0 Z" fill="#ff7eb6" stroke="#c93a7c" stroke-width="2.5"/><path d="M0 0 C 30 -24, 34 18, 0 0 Z" fill="#ff7eb6" stroke="#c93a7c" stroke-width="2.5"/><path d="M-3 2 l-8 18 M3 2 l8 18" stroke="#ff7eb6" stroke-width="5" stroke-linecap="round"/><circle r="6" fill="#c93a7c"/></g>` : '';
+  const extra = (mic ? `<text x="150" y="${cy+10}" font-size="44">🎤</text>` : '') + (violin ? `<text x="132" y="${cy+18}" font-size="52">🎻</text>` : '');
+  return `<svg width="${w}" height="${w*H/200}" viewBox="0 0 200 ${H}" xmlns="http://www.w3.org/2000/svg">
+    ${hairBack}
+    ${wingSvg}
+    <circle cx="62" cy="${top+14}" r="17" fill="${fur}"/><circle cx="138" cy="${top+14}" r="17" fill="${fur}"/>
+    <circle cx="62" cy="${top+15}" r="9" fill="#f6a5a5"/><circle cx="138" cy="${top+15}" r="9" fill="#f6a5a5"/>
+    <ellipse cx="100" cy="${cy}" rx="64" ry="${ry}" fill="${fur}"/>
+    <ellipse cx="100" cy="${cy + ry*0.3}" rx="42" ry="${ry*0.58}" fill="#fff1dc"/>
+    ${fringe}
+    ${bowSvg}
+    ${eyes}${lashes}
+    <ellipse cx="66" cy="${top+60}" rx="11" ry="7" fill="#f6a5a5" opacity=".7"/><ellipse cx="134" cy="${top+60}" rx="11" ry="7" fill="#f6a5a5" opacity=".7"/>
+    <ellipse cx="100" cy="${top+53}" rx="5" ry="3.5" fill="#e27a8a"/>
+    <path d="M93 ${top+58} q7 7 14 0" stroke="#2b1a10" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <ellipse cx="60" cy="${cy+8}" rx="10" ry="14" fill="${fur}" stroke="#00000018"/><ellipse cx="140" cy="${cy+8}" rx="10" ry="14" fill="${fur}" stroke="#00000018"/>
+    <ellipse cx="78" cy="${bot-4}" rx="15" ry="8" fill="#f6b8a8"/><ellipse cx="122" cy="${bot-4}" rx="15" ry="8" fill="#f6b8a8"/>
+    ${extra}
+  </svg>`;
+}
+const yara = (o = {}) => hamster({ ...o, bow: has('bow') });
+const HATTAN = (w = 120, mic = false) => hamster({ w, tall: true, fur: '#b38b6d', mic, wings: false, hair: false });
+function violinSVG(n = 0, w = 110){
+  let strings = '';
+  for(let i = 0; i < n; i++) strings += `<line x1="${55.5+i*3}" y1="24" x2="${55.5+i*3}" y2="222" stroke="#eee" stroke-width="1.2"/>`;
+  return `<svg width="${w}" height="${w*260/120}" viewBox="0 0 120 260" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="60" cy="14" r="9" fill="#7a3b17"/>
+    <rect x="54" y="14" width="12" height="70" rx="3" fill="#7a3b17"/>
+    <rect x="44" y="26" width="10" height="5" rx="2" fill="#3a1a08"/><rect x="66" y="40" width="10" height="5" rx="2" fill="#3a1a08"/>
+    <rect x="44" y="50" width="10" height="5" rx="2" fill="#3a1a08"/><rect x="66" y="62" width="10" height="5" rx="2" fill="#3a1a08"/>
+    <path d="M60 80 C 20 80, 18 120, 36 135 C 22 145, 10 175, 22 210 C 32 240, 88 240, 98 210 C 110 175, 98 145, 84 135 C 102 120, 100 80, 60 80 Z" fill="#b5562a" stroke="#5a2a10" stroke-width="3"/>
+    <rect x="53" y="30" width="14" height="140" rx="4" fill="#222"/>
+    <path d="M40 160 q-7 15 0 32 M80 160 q7 15 0 32" stroke="#3a1a08" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <rect x="44" y="180" width="32" height="5" rx="2" fill="#e8c07a"/>
+    <path d="M52 198 L68 198 L65 228 L55 228 Z" fill="#222"/>
+    ${strings}
+  </svg>`;
+}
+function sunflowerSVG(w = 70){
+  let petals = '';
+  for(let i = 0; i < 12; i++) petals += `<ellipse cx="0" cy="-29" rx="9" ry="19" fill="#ffc928" stroke="#e09f00" stroke-width="1.5" transform="rotate(${i*30})"/>`;
+  let dots = '';
+  for(let i = 0; i < 10; i++){ const a = i * 2.4, r = 4 + (i % 3) * 3.5; dots += `<circle cx="${(Math.cos(a)*r).toFixed(1)}" cy="${(Math.sin(a)*r).toFixed(1)}" r="1.8" fill="#3d2410"/>`; }
+  return `<svg width="${w}" height="${w*1.5}" viewBox="-50 -50 100 150" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 15 C 5 45, -5 70, 0 100" stroke="#3f8f3a" stroke-width="6" fill="none"/>
+    <ellipse cx="15" cy="58" rx="15" ry="6" fill="#4caf50" transform="rotate(-30 15 58)"/>
+    <ellipse cx="-14" cy="78" rx="14" ry="6" fill="#4caf50" transform="rotate(30 -14 78)"/>
+    <g class="petals">${petals}</g>
+    <circle class="bud" r="15" fill="#6abf4b" stroke="#3f8f3a" stroke-width="3"/>
+    <g class="center"><circle r="17" fill="#6b3e1f"/>${dots}</g>
+  </svg>`;
+}
+function svgImg(svg){ const im = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); return im; }
+
+/* ---------- world backgrounds (all original) ---------- */
+function seeded(n, seed, fn){ let s = seed, out = ''; const r = () => (s = (s * 9301 + 49297) % 233280) / 233280; for(let i = 0; i < n; i++) out += fn(r, i); return out; }
+const stars = (n, seed, maxY = 380) => seeded(n, seed, r => `<circle cx="${(r()*400).toFixed(0)}" cy="${(r()*maxY).toFixed(0)}" r="${(0.6 + r()*1.6).toFixed(1)}" fill="#fff" opacity="${(0.4 + r()*0.6).toFixed(2)}"/>`);
+const tree = (x, y, s) => `<g transform="translate(${x} ${y}) scale(${s})"><rect x="-3" y="0" width="6" height="16" fill="#5a3b22"/><polygon points="0,-60 -22,-16 22,-16" fill="#2f6b3f"/><polygon points="0,-44 -26,4 26,4" fill="#3a7d4a"/></g>`;
+const SVG = inner => `<svg viewBox="0 0 400 600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+const BG = {
+  title: SVG(`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe6b8"/><stop offset="1" stop-color="#ffd0e0"/></linearGradient></defs><rect width="400" height="600" fill="url(#g)"/>${seeded(18, 7, r => `<text x="${(r()*380).toFixed(0)}" y="${(r()*600).toFixed(0)}" font-size="${(14+r()*14).toFixed(0)}" opacity=".35">${['🌻','🍊','🎵','✨','🎻'][Math.floor(r()*5)]}</text>`)}`),
+  burrow: SVG(`<defs><radialGradient id="g" cx=".5" cy=".4" r=".8"><stop offset="0" stop-color="#f6dfbd"/><stop offset="1" stop-color="#cfa274"/></radialGradient></defs><rect width="400" height="600" fill="url(#g)"/><circle cx="310" cy="110" r="62" fill="#cfe9ff" stroke="#8a5a32" stroke-width="12"/><g fill="#fff"><circle cx="290" cy="100" r="13"/><circle cx="306" cy="94" r="17"/><circle cx="323" cy="101" r="12"/></g><path d="M310 48v124M248 110h124" stroke="#8a5a32" stroke-width="6"/><rect x="40" y="70" width="90" height="70" rx="6" fill="#fff8ea" stroke="#8a5a32" stroke-width="6"/><polygon points="50,130 75,95 95,118 108,104 122,130" fill="#7f93ad"/><circle cx="110" cy="90" r="8" fill="#ffcc33"/><ellipse cx="200" cy="565" rx="175" ry="40" fill="#e07b12" opacity=".3"/><ellipse cx="200" cy="565" rx="120" ry="25" fill="#ffcc33" opacity=".35"/>`),
+  painting: SVG(`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fcdf2"/><stop offset=".62" stop-color="#fff0d2"/></linearGradient></defs><rect width="400" height="600" fill="url(#g)"/><g fill="#fff" opacity=".95"><ellipse cx="80" cy="80" rx="46" ry="16"/><ellipse cx="105" cy="70" rx="28" ry="18"/><ellipse cx="300" cy="120" rx="52" ry="15"/><ellipse cx="320" cy="108" rx="26" ry="16"/></g><polygon points="-30,390 110,170 250,390" fill="#7f93ad"/><polygon points="110,170 84,212 99,206 110,224 124,204 137,212" fill="#fff"/><polygon points="140,390 295,120 450,390" fill="#687e9b"/><polygon points="295,120 262,176 281,168 295,190 311,166 328,176" fill="#fff"/><rect y="380" width="400" height="220" fill="#8cc084"/><path d="M0 450 Q200 420 400 450 L400 500 Q200 520 0 500Z" fill="#8fc3e6"/>${[[30,400,.9],[60,390,1.1],[350,395,1],[375,405,.8],[330,420,.7],[20,520,1.2],[380,530,1.1]].map(([x,y,s]) => tree(x,y,s)).join('')}<rect x="6" y="6" width="388" height="588" fill="none" stroke="#c9a14a" stroke-width="12"/><rect x="14" y="14" width="372" height="572" fill="none" stroke="#e8c97a" stroke-width="3"/>`),
+  tower: SVG(`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2c2150"/><stop offset=".7" stop-color="#f0a46b"/></linearGradient></defs><rect width="400" height="600" fill="url(#g)"/>${stars(40, 3, 250)}<path d="M0 470 Q40 430 80 460 Q120 420 160 455 Q210 425 250 460 Q300 430 340 455 Q370 440 400 450 V600 H0Z" fill="#2c3b2e"/><rect x="255" y="120" width="80" height="480" fill="#8d86a3"/><path d="M255 200h80M255 280h80M255 360h80M255 440h80" stroke="#77708d" stroke-width="3"/><polygon points="245,124 295,30 345,124" fill="#6b4c9a"/><rect x="280" y="150" width="30" height="40" rx="14" fill="#ffd56b"/><path d="M295 190 C 285 250, 305 300, 292 360 C 282 420, 302 470, 292 600" stroke="#f7d36a" stroke-width="10" fill="none"/><path d="M295 190 C 285 250, 305 300, 292 360 C 282 420, 302 470, 292 600" stroke="#d9a93a" stroke-width="10" stroke-dasharray="4 10" fill="none"/>${seeded(9, 11, r => `<circle cx="${(r()*230).toFixed(0)}" cy="${(60+r()*300).toFixed(0)}" r="${(3+r()*3).toFixed(1)}" fill="#ffcf5c" opacity=".85"/>`)}`),
+  berk: SVG(`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9cc6e4"/><stop offset=".7" stop-color="#eaf4fa"/></linearGradient></defs><rect width="400" height="600" fill="url(#g)"/><polygon points="60,420 140,300 220,420" fill="#a9bccb"/><polygon points="180,420 270,280 360,420" fill="#98aec0"/><rect y="420" width="400" height="180" fill="#3c7fae"/><path d="M0 450 q20 -8 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0" stroke="#7fb8de" stroke-width="3" fill="none"/><path d="M0 510 q20 -8 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0" stroke="#7fb8de" stroke-width="3" fill="none"/><polygon points="0,290 80,310 120,600 0,600" fill="#56654f"/><polygon points="400,250 310,290 290,600 400,600" fill="#56654f"/><g><rect x="330" y="230" width="30" height="22" fill="#8a5a32"/><polygon points="326,232 345,212 364,232" fill="#b5562a"/><rect x="365" y="236" width="26" height="18" fill="#8a5a32"/><polygon points="361,238 378,220 395,238" fill="#b5562a"/></g>`),
+  kitchen: SVG(`<defs><pattern id="t" width="40" height="40" patternUnits="userSpaceOnUse"><rect width="40" height="40" fill="#fffaf0"/><rect width="40" height="40" fill="none" stroke="#f0dcc0" stroke-width="2"/></pattern></defs><rect width="400" height="600" fill="url(#t)"/><rect x="40" y="50" width="130" height="100" rx="6" fill="#cfe9ff" stroke="#8a5a32" stroke-width="8"/><path d="M105 50v100M40 100h130" stroke="#8a5a32" stroke-width="5"/><g transform="translate(270 70)"><path d="M0 0v30" stroke="#666" stroke-width="3"/><circle cx="0" cy="48" r="20" fill="#555"/><path d="M60 0v24" stroke="#666" stroke-width="3"/><circle cx="60" cy="40" r="15" fill="#777"/></g><rect y="460" width="400" height="140" fill="#c98d5a"/><rect y="450" width="400" height="16" fill="#a8693a"/><g transform="translate(300 400)"><rect x="-34" y="0" width="68" height="50" rx="8" fill="#e05a3a"/><rect x="-40" y="-6" width="80" height="10" rx="4" fill="#b8432a"/></g><text x="40" y="440" font-size="40">🍕</text>`),
+  pony: SVG(`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffcfe8"/><stop offset="1" stop-color="#e3eeff"/></linearGradient></defs><rect width="400" height="600" fill="url(#g)"/>${['#ff6b6b','#ffa94d','#ffd43b','#69db7c','#4dabf7','#9775fa'].map((c, i) => `<circle cx="200" cy="470" r="${250 - i*14}" fill="none" stroke="${c}" stroke-width="14" opacity=".85"/>`).join('')}<g fill="#fff"><circle cx="-10" cy="450" r="40"/><circle cx="40" cy="460" r="34"/><circle cx="410" cy="450" r="40"/><circle cx="360" cy="460" r="34"/></g><ellipse cx="90" cy="600" rx="220" ry="140" fill="#bfe8b9"/><ellipse cx="330" cy="610" rx="220" ry="130" fill="#a6dfa0"/>${seeded(14, 5, r => `<text x="${(r()*380).toFixed(0)}" y="${(r()*330).toFixed(0)}" font-size="${(10+r()*10).toFixed(0)}" fill="#fff">✦</text>`)}`),
+  jazz: SVG(`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f1430"/><stop offset="1" stop-color="#3b1f4f"/></linearGradient></defs><rect width="400" height="600" fill="url(#g)"/>${stars(70, 9, 330)}${seeded(12, 21, (r, i) => { const x = i * 34 - 5, h = 70 + r()*110; return `<rect x="${x}" y="${(420-h).toFixed(0)}" width="30" height="${h.toFixed(0)}" fill="#1c1838"/>` + seeded(5, i * 7 + 1, r2 => r2() > 0.45 ? `<rect x="${(x + 4 + r2()*18).toFixed(0)}" y="${(420 - h + 8 + r2()*(h - 20)).toFixed(0)}" width="5" height="6" fill="#ffd56b" opacity=".8"/>` : ''); })}<polygon points="200,0 120,470 280,470" fill="#c99bff" opacity=".14"/><rect y="420" width="400" height="180" fill="#1b1026"/><rect y="420" width="400" height="6" fill="#ffcc33" opacity=".6"/>`),
+  eras: SVG(`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a0f46"/><stop offset="1" stop-color="#c2408f"/></linearGradient></defs><rect width="400" height="600" fill="url(#g)"/><polygon points="60,0 10,470 130,470" fill="#fff" opacity=".1"/><polygon points="200,0 140,470 260,470" fill="#ffd1f0" opacity=".12"/><polygon points="340,0 270,470 390,470" fill="#fff" opacity=".1"/>${seeded(60, 4, r => `<circle cx="${(r()*400).toFixed(0)}" cy="${(r()*460).toFixed(0)}" r="${(1+r()*2.5).toFixed(1)}" fill="${['#ffd43b','#ff8ccf','#a5d8ff','#fff'][Math.floor(r()*4)]}"/>`)}<rect y="460" width="400" height="140" fill="#1a0b28"/>${seeded(10, 2, (r, i) => `<circle cx="${20 + i*40}" cy="466" r="6" fill="${['#ffd43b','#ff8ccf','#a5d8ff'][i%3]}"/>`)}`),
+  lawn: SVG(`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d1838"/><stop offset=".45" stop-color="#3b3a73"/></linearGradient></defs><rect width="400" height="600" fill="url(#g)"/>${stars(80, 13, 200)}<path d="M0 190 Q100 160 200 185 Q300 160 400 190 V600 H0Z" fill="#24442f"/><path d="M0 260 Q100 240 200 262 Q300 240 400 262 V600 H0Z" fill="#2c5238"/><path d="M0 360 Q100 340 200 362 Q300 340 400 362 V600 H0Z" fill="#336040"/><circle cx="70" cy="70" r="26" fill="#fff6d0"/><circle cx="82" cy="62" r="24" fill="#0f1a3c"/>`)
+};
+function setWorld(k){ $('#bg').innerHTML = BG[k] || ''; }
+
+/* ---------- canvas helper ---------- */
+function makeCanvas(goalText){
+  art.innerHTML = `<div class="goal">${goalText}</div><canvas class="play"></canvas>`;
+  const cv = art.querySelector('canvas'), dpr = window.devicePixelRatio || 1;
+  const W = art.clientWidth, H = art.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+  return { cv, ctx, W, H, goal: art.querySelector('.goal') };
+}
+function roundRect(ctx, x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+
+/* ---------- mini-game: catch (oranges falling / lanterns rising) ---------- */
+function catchGame({ goal: GOAL, good, bad, up = false, badRate = 0.3, badMsg, onBad }){
+  return new Promise(res => {
+    const { cv, ctx, W, H, goal } = makeCanvas(`${good} 0 / ${GOAL}`);
+    const R = Math.max(22, Math.min(30, W / 13));
+    let items = [], pops = [], got = 0, last = performance.now(), spawn = 0, rush = 0, running = true, done = false;
+    window.__or = () => items;
+    cv.addEventListener('pointerdown', e => {
+      if(done) return;
+      const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+      for(let i = items.length - 1; i >= 0; i--){
+        const it = items[i];
+        if(Math.hypot(it.x - x, it.y - y) < R * 1.3){
+          items.splice(i, 1);
+          if(it.bad){
+            got = Math.max(0, got - 1);
+            const extra = onBad ? onBad() : '';
+            if(extra === 'rush') rush = 3;
+            pops.push({ x, y, t: 0, txt: badMsg + (extra === 'rush' ? ' ⚡' : '') });
+            buzz(); shake(); goal.textContent = `${good} ${got} / ${GOAL}`;
+          } else {
+            got++; pluck(NOTE(67 + [0, 2, 4, 7, 9, 12][got % 6]));
+            pops.push({ x, y, t: 0, txt: `+1 ${good}` });
+            goal.textContent = `${good} ${got} / ${GOAL}`;
+            if(got >= GOAL){ done = true; setTimeout(() => { running = false; res(); }, 800); }
+          }
+          break;
+        }
+      }
+    });
+    function frame(t){
+      const dt = Math.min(0.05, (t - last) / 1000); last = t;
+      spawn -= dt; if(rush > 0) rush -= dt;
+      if(spawn <= 0 && !done){
+        items.push({ x: R + Math.random() * (W - 2 * R), y: up ? H + R : -R, v: 105 + Math.random() * 90, bad: Math.random() < badRate, rot: Math.random() * 6, wob: Math.random() * 6 });
+        spawn = 0.42 + Math.random() * 0.3;
+      }
+      ctx.clearRect(0, 0, W, H);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      for(const it of items){
+        it.y += (up ? -1 : 1) * it.v * dt * (rush > 0 ? 1.7 : 1); it.rot += dt * 2;
+        if(up) it.x += Math.sin(it.rot + it.wob) * 0.6;
+        ctx.save(); ctx.translate(it.x, it.y); ctx.rotate(Math.sin(it.rot) * (it.bad && up ? 1.2 : 0.3));
+        if(it.bad && bad === 'sugar'){
+          const s = R * 1.3;
+          ctx.fillStyle = '#fff'; ctx.strokeStyle = '#c9b8a3'; ctx.lineWidth = 2;
+          roundRect(ctx, -s / 2, -s / 2, s, s, 6); ctx.fill(); ctx.stroke();
+          ctx.font = `${R * 0.7}px serif`; ctx.fillText('✨', s * 0.4, -s * 0.45);
+        } else {
+          if(!it.bad && up){ ctx.fillStyle = 'rgba(255,207,92,.35)'; ctx.beginPath(); ctx.arc(0, 0, R * 1.2, 0, 7); ctx.fill(); }
+          ctx.font = `${R * 1.7}px serif`; ctx.fillText(it.bad ? bad : good, 0, 0);
+        }
+        ctx.restore();
+      }
+      items = items.filter(it => up ? it.y > -R : it.y < H + R);
+      for(const p of pops){
+        p.t += dt; ctx.globalAlpha = Math.max(0, 1 - p.t);
+        ctx.font = '700 16px Fredoka, sans-serif'; ctx.fillStyle = '#fff'; ctx.strokeStyle = '#4a2c14'; ctx.lineWidth = 4;
+        const px = Math.min(W - 90, Math.max(90, p.x)), py = p.y - p.t * 40;
+        ctx.strokeText(p.txt, px, py); ctx.fillText(p.txt, px, py); ctx.globalAlpha = 1;
+      }
+      pops = pops.filter(p => p.t < 1);
+      if(running) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  });
+}
+
+/* ---------- mini-game: flying ---------- */
+function flyGame(){
+  const GOAL = 8;
+  return new Promise(res => {
+    info('🪽 Tap anywhere to flap. Catch the music notes.');
+    const { cv, ctx, W, H, goal } = makeCanvas(`🎵 0 / ${GOAL}`);
+    const svg = yara({ w: 100 }), img = svgImg(svg);
+    const asp = (has('bow') ? 236 : 226) / 200;
+    const size = Math.min(66, W / 6), hx = W * 0.25;
+    let y = H / 2, vy = 0, got = 0, last = performance.now(), notes = [], spawn = 0.6, running = true, done = false, t0 = 0;
+    const clouds = [...Array(4)].map(() => ({ x: Math.random() * W, y: 30 + Math.random() * H * 0.5, s: 0.5 + Math.random() }));
+    cv.addEventListener('pointerdown', () => { vy = -250; pluck(NOTE(84), 0.05); });
+    window.__fly = { notes: () => notes, y: () => y };
+    function frame(t){
+      const dt = Math.min(0.05, (t - last) / 1000); last = t; t0 += dt;
+      vy += 520 * dt; y += vy * dt;
+      if(y < size / 2){ y = size / 2; vy = 0; }
+      if(y > H - 40 - size / 2){ y = H - 40 - size / 2; vy = -200; toast('Splash! The hair is soaked 😭'); }
+      spawn -= dt;
+      if(spawn <= 0 && !done){ notes.push({ x: W + 20, y: H * 0.15 + Math.random() * H * 0.6 }); spawn = 0.9 + Math.random() * 0.6; }
+      ctx.clearRect(0, 0, W, H);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = '40px serif';
+      for(const c of clouds){ c.x -= 20 * c.s * dt; if(c.x < -50) c.x = W + 50; ctx.globalAlpha = 0.85; ctx.fillText('☁️', c.x, c.y); ctx.globalAlpha = 1; }
+      ctx.fillStyle = 'rgba(60,127,174,.85)'; ctx.fillRect(0, H - 40, W, 40);
+      ctx.fillStyle = '#8fcdf3';
+      for(let x = -30; x < W + 30; x += 30){ ctx.beginPath(); ctx.arc(x + ((t0 * 40) % 30), H - 40, 10, Math.PI, 0); ctx.fill(); }
+      ctx.font = '34px serif';
+      for(const n of notes){
+        n.x -= 175 * dt;
+        const dx = hx - n.x, dy = y - n.y;
+        if(Math.abs(dx) < size * 1.2 && Math.abs(dy) < size * 1.1){ n.y += dy * Math.min(1, dt * 2.5); }
+        const ny = n.y + Math.sin(t0 * 3 + n.x * 0.02) * 6;
+        ctx.fillStyle = '#4a2c14'; ctx.fillText('🎵', n.x, ny);
+        if(!n.hit && Math.hypot(n.x - hx, ny - y) < size * 0.8){
+          n.hit = true; got++; pluck(NOTE(62 + [0, 2, 4, 5, 7, 9, 11, 12][got % 8]));
+          goal.textContent = `🎵 ${got} / ${GOAL}`;
+          if(got >= GOAL && !done){ done = true; setTimeout(() => { running = false; res(); }, 900); }
+        }
+      }
+      notes = notes.filter(n => n.x > -30 && !n.hit);
+      ctx.save(); ctx.translate(hx, y); ctx.rotate(Math.max(-0.4, Math.min(0.5, vy / 600)));
+      if(img.complete) ctx.drawImage(img, -size / 2, -size * asp / 2, size, size * asp);
+      ctx.restore();
+      if(running) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  });
+}
+
+/* ---------- mini-game: pasta ---------- */
+function pastaGame(){
+  return new Promise(res => {
+    const steps = [['🌾', 'Flour'], ['🥚', 'Eggs'], ['👐', 'Knead'], ['📏', 'Roll & cut'], ['♨️', 'Boil'], ['🍅', 'Sauce']];
+    const wrong = {
+      '🥚': 'Just eggs? That\'s an omelette, not pasta.',
+      '👐': 'Kneading… air. Very relaxing. Not pasta.',
+      '📏': 'You can\'t cut dough that doesn\'t exist yet 😭',
+      '♨️': 'Boiling water. Hattan cannot eat water.',
+      '🍅': 'That\'s just tomato soup, bruh.'
+    };
+    const potStages = ['🍳', '🌾', '🥣', '🟡', '📜', '♨️', '🍝'];
+    let i = 0;
+    info('🍝 Tap the steps in the right order.');
+    const order = shuffle(steps);
+    art.innerHTML = panel(`<div class="pot" id="pot">🍳</div><div class="progress" id="prog">&nbsp;</div><div class="grid">${order.map(s => `<button class="btn alt step" data-e="${s[0]}"><span>${s[0]}</span>${s[1]}</button>`).join('')}</div>`);
+    const prog = $('#prog'), pot = $('#pot');
+    art.querySelectorAll('.step').forEach(b => b.onclick = () => {
+      audio();
+      const e = b.dataset.e;
+      if(i < steps.length && e === steps[i][0]){
+        i++; b.disabled = true; b.classList.add('done');
+        pluck(NOTE(60 + [0, 2, 4, 5, 7, 9, 12][i]));
+        pot.textContent = potStages[i]; prog.textContent = '✅'.repeat(i);
+        if(i === steps.length) setTimeout(res, 900);
+      } else { toast(wrong[e] || 'Not yet!'); shake(); buzz(); }
+    });
+  });
+}
+
+/* ---------- PRO: tuning by ear ---------- */
+function tuneGame(){
+  return new Promise(res => {
+    const S = [['G', 55], ['D', 62], ['A', 69], ['E', 76]];
+    let k = 0;
+    info('🎻 No tuner. Tune by ear to within 3 cents. "Together" lets you hear the beats.');
+    function show(){
+      const [nm, m] = S[k];
+      let fails = 0;
+      const start = Math.round((Math.random() < 0.5 ? -1 : 1) * (15 + Math.random() * 40));
+      art.innerHTML = panel(`<div class="sname">${nm} string <small>(${k + 1}/4)</small></div>
+        <div class="meter" id="meter" style="display:none"><div class="zone"></div><div class="needle" id="needle"></div><span class="lo">flat</span><span class="hi">sharp</span></div>
+        <input type="range" id="sl" min="-60" max="60" step="1" value="${start}">
+        <div class="row"><button class="btn sm alt" data-d="-5">−5</button><button class="btn sm alt" data-d="-1">−1</button><button class="btn sm alt" data-d="1">+1</button><button class="btn sm alt" data-d="5">+5</button></div>
+        <div class="row"><button class="btn sm alt" id="ref">🔔 Correct</button><button class="btn sm alt" id="mine">🎻 Mine</button><button class="btn sm alt" id="both">🔔+🎻 Together</button></div>
+        <button class="btn" id="chk">✅ It's in tune</button>
+        <div class="status" id="st">&nbsp;</div>`);
+      const sl = $('#sl'), st = $('#st'), meter = $('#meter'), needle = $('#needle');
+      const freq = () => NOTE(m) * Math.pow(2, (+sl.value) / 1200);
+      const upd = () => { const c = +sl.value; needle.style.left = (50 + c * 50 / 60) + '%'; needle.classList.toggle('ok', Math.abs(c) <= 3); };
+      upd();
+      sl.oninput = upd;
+      sl.onchange = () => tone(freq(), 0.8, 0, 0.14, 0);
+      art.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { sl.value = +sl.value + (+b.dataset.d); upd(); tone(freq(), 0.8, 0, 0.14, 0); });
+      $('#ref').onclick = () => tone(NOTE(m), 1.2, 0, 0.14, 0);
+      $('#mine').onclick = () => tone(freq(), 1.2, 0, 0.14, 0);
+      $('#both').onclick = () => { tone(NOTE(m), 2.2, 0, 0.09, 0); tone(freq(), 2.2, 0, 0.09, 0); };
+      $('#chk').onclick = () => {
+        const c = +sl.value;
+        if(Math.abs(c) <= 3){
+          st.textContent = `In tune! (${c >= 0 ? '+' : ''}${c} cents) ✨`; pluck(NOTE(m));
+          art.querySelectorAll('button,input').forEach(e => e.disabled = true);
+          setTimeout(() => { k++; if(k < 4) show(); else res(); }, 1300);
+        } else {
+          fails++; buzz(); shake();
+          st.textContent = 'Not quite. Listen to the beats… 🤨';
+          if(fails === 4){ meter.style.display = ''; upd(); toast('Hattan lends you his tuner app. Embarrassing. 📱'); }
+        }
+      };
+    }
+    show();
+  });
+}
+
+/* ---------- PRO: ear-training quiz engine ---------- */
+async function retryOrSkip(fails, what, judge){
+  if(fails < 3) return false;
+  const c = await choose(judge, `${what}`, ['🔁 Try again', '😮‍💨 Skip (people will gossip)']);
+  if(c === 1){ state.skips++; return true; }
+  return false;
+}
+async function quiz({ title, sub, rounds, need, options, cols, makeQ, judge }){
+  let fails = 0;
+  while(true){
+    let correct = 0;
+    for(let r = 0; r < rounds; r++){
+      const q = makeQ(); window.__q = q;
+      art.innerHTML = panel(`<div class="sname">${title}</div><div class="qmeta">${sub} · Q${r + 1}/${rounds} · ✅ ${correct} (need ${need})</div>
+        <div class="opts" style="grid-template-columns:repeat(${cols},1fr)">${options.map((o, i) => `<button class="btn alt opt" data-i="${i}" disabled>${o}</button>`).join('')}</div>
+        <button class="btn sm alt" id="again" disabled>🔁 Listen again</button>`);
+      const btns = [...art.querySelectorAll('.opt')], again = $('#again');
+      const enable = v => { btns.forEach(b => b.disabled = !v); again.disabled = !v; };
+      const play = async () => { enable(false); info('👂 Listen…'); await q.play(btns); info('Your answer?'); enable(true); };
+      await sleep(350);
+      await play();
+      const pick = await new Promise(done => {
+        again.onclick = () => play();
+        btns.forEach((b, i) => b.onclick = () => { enable(false); done(i); });
+      });
+      if(pick === q.answer){ correct++; btns[pick].classList.add('right'); pluck(NOTE(84)); }
+      else { btns[pick].classList.add('bad'); btns[q.answer].classList.add('right'); buzz(); toast(`It was ${options[q.answer]}`); }
+      await sleep(1100);
+    }
+    if(correct >= need){ toast(`${correct}/${rounds}. Passed! ✨`); return true; }
+    fails++;
+    const opts = fails >= 2 ? ['🔁 Retake', '😮‍💨 Skip (people will gossip)'] : ['🔁 Retake'];
+    const c = await choose(judge, `${correct}/${rounds}. You need ${need}. Again!`, opts);
+    if(c === 1){ state.skips++; return false; }
+  }
+}
+function litPlay(btns, idx, at){ setTimeout(() => btns[idx].classList.add('lit'), at); setTimeout(() => btns[idx].classList.remove('lit'), at + 420); }
+const SCALE = [60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79];
+function genPhrase(len){
+  let idx = rand(5), out = [SCALE[idx]];
+  for(let i = 1; i < len; i++){
+    let s; do{ s = [-3, -2, -1, 1, 2, 3, 4][rand(7)]; }while(idx + s < 0 || idx + s > SCALE.length - 1);
+    idx += s; out.push(SCALE[idx]);
+  }
+  return out;
+}
+/* Hattan sings back 8 notes; one is 20-35 cents out */
+function detectiveQ(){
+  const mel = genPhrase(8);
+  const wrong = rand(8), off = (Math.random() < 0.5 ? -1 : 1) * (20 + rand(16)) / 100;
+  return {
+    answer: wrong,
+    play: async btns => {
+      mel.forEach((m, i) => { tone(NOTE(m), 0.42, i * 0.5, 0.14, 0.002); litPlay(btns, i, i * 500); });
+      await sleep(mel.length * 500 + 500);
+      mel.forEach((m, i) => { voice(NOTE(m + (i === wrong ? off : 0)), 0.42, i * 0.5, 0.002); litPlay(btns, i, i * 500); });
+      await sleep(mel.length * 500 + 200);
+    }
+  };
+}
+const INTERVALS = ['m2', 'M2', 'm3', 'M3', 'P4', 'TT', 'P5', 'm6', 'M6', 'm7', 'M7', 'P8'];
+function intervalQ(){
+  const i = 1 + rand(12), root = 53 + rand(14), down = Math.random() < 0.4;
+  const a = root + (down ? i : 0), b = root + (down ? 0 : i);
+  return {
+    answer: i - 1,
+    play: async () => {
+      tone(NOTE(a), 0.7, 0, 0.14, 0.002); tone(NOTE(b), 0.7, 0.8, 0.14, 0.002);
+      tone(NOTE(a), 1.1, 1.75, 0.09, 0.002); tone(NOTE(b), 1.1, 1.75, 0.09, 0.002);
+      await sleep(3000);
+    }
+  };
+}
+const CHORDS = [['Major', [0, 4, 7]], ['Minor', [0, 3, 7]], ['Dim', [0, 3, 6]], ['Aug', [0, 4, 8]], ['Dom 7', [0, 4, 7, 10]], ['Maj 7', [0, 4, 7, 11]], ['Min 7', [0, 3, 7, 10]], ['Half-dim', [0, 3, 6, 10]], ['Dim 7', [0, 3, 6, 9]]];
+function chordQ(){
+  const c = rand(CHORDS.length), root = 50 + rand(10);
+  return { answer: c, play: async () => { CHORDS[c][1].forEach(s => tone(NOTE(root + s), 1.8, 0, 0.065, 0.002)); await sleep(2100); } };
+}
+
+/* PRO: melodic dictation */
+function genDictation(len, chromatic){
+  const sc = [60, 62, 64, 65, 67, 69, 71, 72];
+  let idx = 0, m = [60];
+  for(let i = 1; i < len; i++){
+    let s; do{ s = [-3, -2, -1, 1, 2, 3, 4][rand(7)]; }while(idx + s < 0 || idx + s > 7);
+    idx += s; m.push(sc[idx]);
+  }
+  if(chromatic){
+    /* pick an inner note that has a chromatic neighbour on the keyboard; if none, try a new melody */
+    const opts = [];
+    for(let k = 1; k < len - 1; k++) [m[k] + 1, m[k] - 1].forEach(n => { if(n > 60 && n < 72 && !sc.includes(n)) opts.push([k, n]); });
+    if(!opts.length) return genDictation(len, chromatic);
+    const [k, n] = opts[rand(opts.length)]; m[k] = n;
+  }
+  return m;
+}
+const KEYS = [[60, 'w', 0, 'C'], [61, 'b', 1], [62, 'w', 1, 'D'], [63, 'b', 2], [64, 'w', 2, 'E'], [65, 'w', 3, 'F'], [66, 'b', 4], [67, 'w', 4, 'G'], [68, 'b', 5], [69, 'w', 5, 'A'], [70, 'b', 6], [71, 'w', 6, 'B'], [72, 'w', 7, 'C']];
+function dictationRound(mel, label){
+  return new Promise(res => {
+    const len = mel.length;
+    art.innerHTML = panel(`<div class="sname">Melodic dictation</div><div class="qmeta">${label} · ${len} notes · first note is C</div>
+      <div class="slots" id="slots">${'<i></i>'.repeat(len)}</div>
+      <div class="kb">${KEYS.map(([m, t, p, nm]) => t === 'w'
+        ? `<div class="w" data-m="${m}" style="left:${p * 12.5}%">${nm}</div>`
+        : `<div class="b" data-m="${m}" style="left:${p * 12.5 - 3.75}%"></div>`).join('')}</div>
+      <div class="row"><button class="btn sm alt" id="again">🔁 Listen</button><button class="btn sm alt" id="undo">⌫ Undo</button><button class="btn sm" id="sub">✅ Submit</button></div>`);
+    let input = []; window.__mel = mel;
+    const slots = [...art.querySelectorAll('#slots i')];
+    const draw = () => slots.forEach((s, i) => s.classList.toggle('f', i < input.length));
+    const play = async () => { info('🎤 Hattan sings…'); mel.forEach((m, i) => voice(NOTE(m), 0.45, i * 0.55, 0.003)); await sleep(len * 550 + 200); info('Play it back on the keyboard, then submit.'); };
+    art.querySelectorAll('.kb [data-m]').forEach(k => k.onpointerdown = e => {
+      e.preventDefault(); audio();
+      const m = +k.dataset.m; pluck(NOTE(m), 0.25);
+      k.classList.add('on'); setTimeout(() => k.classList.remove('on'), 180);
+      if(input.length < len){ input.push(m); draw(); }
+    });
+    $('#again').onclick = () => play();
+    $('#undo').onclick = () => { input.pop(); draw(); };
+    $('#sub').onclick = () => {
+      if(input.length < len){ toast(`Enter all ${len} notes`); return; }
+      if(input.every((m, i) => m === mel[i])){ $('#slots').classList.add('ok'); sparkle(); setTimeout(() => res(true), 900); }
+      else { buzz(); shake(); toast('Not quite. Listen again 👂'); input = []; draw(); setTimeout(() => res(false), 600); }
+    };
+    setTimeout(play, 400);
+  });
+}
+async function dictation(judge){
+  const tasks = [[5, false, 'Verse (1 of 2)'], [6, true, 'Bridge (2 of 2), one chromatic note']];
+  for(const [len, chrom, label] of tasks){
+    let mel = genDictation(len, chrom), fails = 0;
+    while(!(await dictationRound(mel, label))){
+      fails++;
+      if(await retryOrSkip(fails, 'Three wrong answers in a row.', judge)) break;
+      if(fails >= 3){ fails = 0; mel = genDictation(len, chrom); }
+    }
+  }
+}
+
+/* PRO: internal tempo */
+function rhythmRound(title, sub){
+  return new Promise(res => {
+    art.innerHTML = panel(`<div class="sname">${title}</div><div class="qmeta">${sub}<br>4 clicks at 100 BPM, then silence. Keep the beat for 8 taps.<br>Pass: within ±1.5 BPM, steady to ±18 ms.</div>
+      <div class="dots" id="dots">○○○○○○○○</div>
+      <button class="btn tapbtn" id="tap" disabled>TAP</button>
+      <button class="btn sm alt" id="go">▶ Start</button><div class="status" id="st">&nbsp;</div>`);
+    const tap = $('#tap'), go = $('#go'), dots = $('#dots'), st = $('#st');
+    let taps = [], armedAt = 0, live = false;
+    go.onclick = () => {
+      audio(); taps = []; dots.textContent = '○○○○○○○○'; st.innerHTML = '&nbsp;';
+      go.disabled = true; tap.disabled = false;
+      for(let i = 0; i < 4; i++) click(0.3 + i * 0.6, i === 0);
+      armedAt = performance.now() + 300 + 3 * 600 + 300;
+      live = true;
+      info('🥁 Count-in… then keep the beat yourself.');
+    };
+    tap.onpointerdown = e => {
+      e.preventDefault();
+      if(!live) return;
+      tap.classList.remove('pulse'); void tap.offsetWidth; tap.classList.add('pulse');
+      const t = performance.now();
+      if(t < armedAt) return;
+      taps.push(t); pluck(NOTE(48 + taps.length % 2 * 7), 0.12);
+      dots.textContent = '●'.repeat(taps.length) + '○'.repeat(8 - taps.length);
+      if(taps.length === 8){
+        live = false; tap.disabled = true; go.disabled = false;
+        const iv = taps.slice(1).map((t, i) => t - taps[i]);
+        const mean = iv.reduce((a, b) => a + b, 0) / iv.length;
+        const sd = Math.sqrt(iv.reduce((a, b) => a + (b - mean) ** 2, 0) / iv.length);
+        const bpm = 60000 / mean;
+        st.textContent = `${bpm.toFixed(1)} BPM · steady to ±${sd.toFixed(0)} ms`;
+        const pass = Math.abs(bpm - 100) <= 1.5 && sd <= 18;
+        if(pass){ sparkle(); setTimeout(() => res(true), 1300); }
+        else { buzz(); info(Math.abs(bpm - 100) > 1.5 ? (bpm > 100 ? 'Rushing! 🏃‍♀️ Again.' : 'Dragging… 🐌 Again.') : 'Tempo fine, but wobbly. Again.'); setTimeout(() => res(false), 1500); }
+      }
+    };
+    info('Tap ▶ Start when ready.');
+  });
+}
+async function rhythm(title, sub, judge){
+  let fails = 0;
+  while(!(await rhythmRound(title, sub))){ fails++; if(await retryOrSkip(fails, 'Three tries. The rhythm is fighting back.', judge)) return; if(fails >= 3) fails = 0; }
+}
+
+/* ---------- finale: Happy Birthday by ear ---------- */
+function fieldHTML(){
+  const spots = [[12, 13], [32, 9], [52, 15], [72, 10], [90, 14], [24, 36], [76, 36]];
+  return `<div class="field">${spots.map(([x, y], i) => `<div class="flower" data-i="${i}" style="left:${x}%;top:${y}%">${sunflowerSVG(i > 4 ? 56 : 62)}</div>`).join('')}
+    <div class="giftrow" id="giftrow">${GIFT_ORDER.filter(k => k !== 'piano').map(k => `<span data-k="${k}">${GIFTS[k].icon}</span>`).join('')}</div>
+    <div class="beach"></div><div class="heroic">${yara({ w: 104, violin: true })}</div><div class="piano">🎹</div><div class="cabin"><svg width="64" height="56" viewBox="0 0 64 56" xmlns="http://www.w3.org/2000/svg"><rect x="8" y="24" width="48" height="30" fill="#8a5a32" stroke="#4a2c14" stroke-width="2"/><path d="M8 32h48M8 40h48M8 48h48" stroke="#6b4423" stroke-width="2"/><polygon points="2,26 32,4 62,26" fill="#5a3b22" stroke="#4a2c14" stroke-width="2"/><rect x="42" y="6" width="7" height="12" fill="#6b4423"/><rect x="16" y="30" width="14" height="12" fill="#ffd56b" stroke="#4a2c14" stroke-width="2"/><path d="M23 30v12M16 36h14" stroke="#4a2c14" stroke-width="1.5"/><rect x="36" y="34" width="12" height="20" fill="#4a2c14"/></svg></div></div>`;
+}
+function bloomGame(){
+  return new Promise(res => {
+    const notes = shuffle([67, 69, 71, 72, 74, 76, 78]); window.__bloom = notes;
+    const target = [67, 67, 69, 67, 72, 71];
+    let hist = [], taps = 0, done = false;
+    const flowers = [...art.querySelectorAll('.flower')];
+    flowers.forEach((f, i) => f.onclick = () => {
+      if(done) return;
+      audio();
+      f.classList.add('open'); f.classList.remove('ping'); void f.offsetWidth; f.classList.add('ping');
+      tone(NOTE(notes[i]), 0.45, 0, 0.15, 0.004);
+      hist.push(notes[i]); hist = hist.slice(-6); taps++;
+      if(hist.join() === target.join()){
+        done = true; flowers.forEach(x => { x.classList.add('open'); x.classList.remove('hint'); });
+        setTimeout(res, 900); return;
+      }
+      if(taps === 35){ toast('Hint: the first note is the wiggly flower 🌻'); flowers[notes.indexOf(67)].classList.add('hint'); }
+      if(taps === 70){ toast('Hint 2: same, same, up a step, back, up a fourth, down a step'); }
+    });
+  });
+}
+function playHappyBirthday(){
+  const m = [67, 67, 69, 67, 72, 71, 67, 67, 69, 67, 74, 72, 67, 67, 79, 76, 72, 71, 69, 77, 77, 76, 72, 74, 72];
+  const d = [.75, .25, 1, 1, 1, 2, .75, .25, 1, 1, 1, 2, .75, .25, 1, 1, 1, 1, 2, .75, .25, 1, 1, 1, 2.5];
+  /* chord changes, keyed by melody note index: C, G7, G7, C, C7, G7 (under B), F, C, G7, C */
+  const CH = { 2: [48, 55, 60, 64], 5: [43, 53, 59, 62], 8: [43, 53, 59, 62], 11: [48, 55, 60, 64], 14: [48, 58, 64, 67], 17: [43, 53, 59, 62], 18: [41, 57, 60, 65], 21: [48, 55, 60, 64], 23: [43, 53, 59, 62], 24: [48, 55, 60, 64] };
+  const beat = 0.48; const starts = []; let t = 0.15;
+  m.forEach((n, i) => { starts.push(t); tone(NOTE(n), d[i] * beat * 0.95, t, 0.15); t += d[i] * beat; });
+  const keys = Object.keys(CH).map(Number);
+  keys.forEach((k, j) => {
+    const st = starts[k], en = j + 1 < keys.length ? starts[keys[j + 1]] : t + 0.6;
+    /* harp-style arpeggio under the violin (scored best in testing: least synthetic, least annoying) */
+    CH[k].forEach((n, v) => v === 0 ? pluck(NOTE(n), 0.13, st) : [0, 0.16, 0.32].forEach((o, j) => pluck(NOTE(n) * (j === 2 ? 2 : 1), 0.08, st + o)));
+  });
+  return sleep(t * 1000 + 700);
+}
+
+/* ---------- confetti ---------- */
+function confetti(seconds = 7){
+  const cv = $('#confetti'), dpr = window.devicePixelRatio || 1;
+  const W = innerWidth, H = innerHeight; cv.width = W * dpr; cv.height = H * dpr;
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const cols = ['#ffcc33', '#f59e2b', '#e07b12', '#8fc3e6', '#f6a5a5', '#6abf4b'];
+  let ps = [], last = performance.now(), age = 0;
+  function frame(t){
+    const dt = Math.min(0.05, (t - last) / 1000); last = t; age += dt;
+    if(age < seconds) for(let i = 0; i < 4; i++) ps.push({ x: Math.random() * W, y: -10, vx: (Math.random() - 0.5) * 60, vy: 80 + Math.random() * 120, r: Math.random() * 6, s: 5 + Math.random() * 6, c: cols[Math.random() * cols.length | 0] });
+    ctx.clearRect(0, 0, W, H);
+    for(const p of ps){ p.x += p.vx * dt; p.y += p.vy * dt; p.r += dt * 5; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); ctx.restore(); }
+    ps = ps.filter(p => p.y < H + 20);
+    if(age < seconds || ps.length) requestAnimationFrame(frame); else ctx.clearRect(0, 0, W, H);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ---------- world title card ---------- */
+async function enterWorld(n, bg, emoji, name, tagline, hud, label){
+  setWorld(bg); setChapter(hud);
+  art.innerHTML = scene(`<div class="wcard"><div class="wnum">${label || (n ? `World ${n} of 7` : 'Prologue')}</div><div class="wemoji">${emoji}</div><div class="wname">${name}</div><div class="wtag">${tagline}</div></div>`);
+  [60, 64, 67, 72].forEach((m, i) => pluck(NOTE(m), 0.12, i * 0.09));
+  await choose('', n ? 'A portal shimmers open.' : 'Ready?', [n ? 'Step through ✨' : 'Begin 🌙']);
+}
+
+/* ================= STORY ================= */
+async function titleScreen(sv){
+  setWorld('title'); setChapter('🪽🎶🌻');
+  art.innerHTML = scene(`<div class="float">${hamster({ w: 160, violin: true })}</div><h1 class="title">Yara's Birthday Quest</h1><div class="sub">7 worlds · 4 strings · 7 gifts<br>1 very off-tune student</div>`);
+  const resumable = sv && sv.ch > 0 && sv.ch < CHAPTERS.length;
+  const c = await choose('', 'Sound on 🔊 Headphones recommended. 🎧', resumable ? [`▶ Continue (${CH_NAMES[sv.ch]})`, '🔁 Start over'] : ['Start 🎻']);
+  audio();
+  return resumable && c === 0 ? sv.ch : 0;
+}
+
+async function prologue(){
+  await enterWorld(0, 'burrow', '🌙', 'The Burrow', 'Where it all begins.', '🏠 The Burrow');
+  art.innerHTML = scene(`${yara({ w: 150, sleepy: true })}`);
+  await talk([
+    ['', '20 November. In a cozy burrow, a small hamster with tiny wings and absurdly long blonde hair wakes up.'],
+    ['Yara', '…okie. Birthday. Let\'s go.'],
+    ['', 'Outside, a cat strolls past the window, doing absolutely nothing.'],
+    ['Yara', 'I wish I was a cat.'],
+    ['', '(Remember that cat.)']
+  ]);
+  art.innerHTML = scene(`<div class="big">🧼</div>${yara({ w: 150 })}`);
+  const c = await choose('', 'Morning routine. Which soap?', ['🧼 Dove', '🧴 Random soap from the back of the cupboard']);
+  if(c === 1){
+    shake(); buzz();
+    await talk([['', 'RASH. 😭😭😭'], ['Yara', 'Everything gives me a rash except Dove. Why did I do that.']]);
+    await choose('', 'Try again?', ['🧼 Dove, obviously']);
+  }
+  await talk([['', 'Fresh. Glowing. Rash-free. Hair: enormous. ✨'], ['', 'She picks up her violin to play herself a birthday tune and…']]);
+  art.innerHTML = scene(violinSVG(0));
+  shake(); buzz();
+  await talk([
+    ['', '…the violin has NO STRINGS. 😭'],
+    ['', 'A note is taped to the case:'],
+    ['The Birthday Committee', '"Dear Yara. Your 4 strings are hidden in 4 other worlds. Every world you visit also has a birthday gift waiting for you. Find everything, then meet us at La La Lawn. 🌻 P.S. Bring the hair."'],
+    ['Yara', 'Other WORLDS?? Bruh.'],
+    ['', 'The little painting on her wall starts to drip. Happy little paint runs down into the shape of… a door.']
+  ]);
+}
+
+async function painting(){
+  await enterWorld(1, 'painting', '🖼️', 'Inside a Happy Little Painting', 'A Bob Ross–style world of soft skies and happy little trees.', '🖼️ The Painting');
+  art.innerHTML = scene(`<div class="big">🌳🍊🌳</div>${yara({ w: 120 })}`);
+  await talk([
+    ['', 'Everything here is painted. Happy little clouds. Happy little trees. Happy little… ORANGE trees. 🍊'],
+    ['', 'When she was little, she watched Bob Ross and ate oranges until she fell asleep. This is basically heaven.'],
+    ['', 'The G string is hidden inside one of the oranges.'],
+    ['Sugar Spirit', 'Psssst. Birthday girl. Forget the oranges. I have bonbonaya. I have a WHOLE BAKERY. 🍫🧁🍰']
+  ]);
+  state.sugar = await choose('Sugar Spirit', 'Just one little bakery?', ['😇 "I\'m slowing down on the sugar, thanks."', '🧁 "Okay. ONE cupcake. It\'s my birthday."']);
+  if(state.sugar === 0) await talk([['Sugar Spirit', 'Respectfully… boo. 😤 Enjoy my sugar cubes then.'], ['Yara', 'Hehe.']]);
+  else await talk([['', 'She eats one cupcake. Every sugar cube she touches now makes her VERY fast.'], ['Sugar Spirit', 'Hehehe. My work here is done.']]);
+  await say('', 'Collect 12 oranges 🍊. Every sugar cube you tap costs you one.');
+  info('🍊 Tap the oranges! Avoid the sugar cubes.');
+  await catchGame({ goal: 12, good: '🍊', bad: 'sugar', badRate: 0.32, badMsg: '-1 🍊 sugar trap!', onBad: () => state.sugar === 1 ? 'rush' : '' });
+  collectString('G');
+  await talk([['', 'Inside the biggest, juiciest orange: the G string! 🎻'], ['', 'And in the corner of the canvas, someone left a little paintbrush with a bow on it.']]);
+  await giveGift('brush');
+}
+
+async function tower(){
+  await enterWorld(2, 'tower', '🏮', 'The Tower', 'A Tangled-style tower deep in the forest. Lantern night.', '🏮 The Tower');
+  art.innerHTML = scene(`${yara({ w: 120 })}`);
+  await talk([
+    ['', 'A tall tower in a forest. A very long golden braid hangs out of the window.'],
+    ['', 'Yara measures it against her own hair. Hers is longer. 😌'],
+    ['', 'A small green chameleon pops out of a flowerpot.'],
+    ['Yara', 'PASCAL?? I\'m so obsessed with you.'],
+    ['', 'On the wall is Rapunzel\'s to-do list for today. 200 things. 199 are ticked. Number 200 says: "help Yara." 🥹'],
+    ['', 'It\'s lantern night. The D string is tied to one of the lanterns, but the frying pans are flying too. Don\'t ask.']
+  ]);
+  await say('', 'Catch 12 lanterns 🏮 as they rise. Tapping a frying pan 🍳 costs you one. BONK.');
+  info('🏮 Tap the rising lanterns! Avoid the frying pans.');
+  await catchGame({ goal: 12, good: '🏮', bad: '🍳', up: true, badRate: 0.3, badMsg: '-1 🏮 BONK!' });
+  collectString('D');
+  await talk([['', 'The last lantern has the D string tied to it! 🎻'], ['Yara', 'Rapunzel did 200 things today. I did 2. Same energy.'], ['', 'One lantern floats down and lands gently in her paws. It\'s hers to keep.']]);
+  await giveGift('lantern');
+}
+
+async function berk(){
+  await enterWorld(3, 'berk', '🐉', 'Berk', 'From How to Train Your Dragon: Vikings, sheep, and far too much wind.', '🐉 Berk');
+  art.innerHTML = scene(`${yara({ w: 130 })}`);
+  await talk([
+    ['', 'An island of Vikings and dragons. The A string is on the sea stack across the water.'],
+    ['', 'Astrid isn\'t home, but she left a note on the door:'],
+    ['Astrid\'s note', '"Dragons are all busy. You have wings. Use them. — A."'],
+    ['Yara', 'Astrid wrote to ME?? 😭 Okay. Okay. Wings.'],
+    ['', 'The hair is not aerodynamic. This will be difficult.']
+  ]);
+  await say('', 'Tap to flap! Catch 8 music notes 🎵 on the way across. Don\'t dip The Hair in the sea.');
+  await flyGame();
+  collectString('A');
+  await talk([['', 'She lands, slightly dizzy, on the sea stack. Her hair lands about two seconds later. 🎻'], ['', 'Next to the A string, a single dragon scale, still warm. A gift from Berk.']]);
+  await giveGift('scale');
+}
+
+async function kitchen(){
+  await enterWorld(4, 'kitchen', '🍝', 'Hattan\'s Kitchen', 'Back in the real world. A very tall, very hungry student awaits.', '🍝 The Kitchen');
+  art.innerHTML = scene(`<div class="pair">${yara({ w: 110 })}${HATTAN(120)}</div>`);
+  await talk([
+    ['Hattan', 'Yara. On 2 February 2025 you said "7a3melak." Homemade pasta. I am STILL waiting. 😭'],
+    ['Yara', 'Bruh. Fine.'],
+    ['Hattan', 'Marvel-sized please. An Avengers portion. And tie your hair back, it\'s going in the sauce.'],
+    ['Hattan', '(I also ordered pizza. Just in case.) 🍕']
+  ]);
+  await say('', 'Make the pasta! Tap the steps in the right order.');
+  await pastaGame();
+  art.innerHTML = scene(`<div class="big">🍝</div><div class="pair">${yara({ w: 100 })}${HATTAN(110, true)}</div>`);
+  await talk([
+    ['Hattan', 'MAMMA MIA. 🤌 (The ABBA kind AND the Italian kind.)'],
+    ['', '(Her 17th birthday was Mamma Mia–themed. Hattan remembers.)'],
+    ['Hattan', 'As payment, I will now sing for you. 🎤']
+  ]);
+  info('🎤 ♪ ♫ ♪');
+  const mel = [60, 62, 64, 65, 67, 64, 60]; let w = 0;
+  mel.forEach((m, i) => { const det = (Math.random() * 2 - 1) * 60 + (i % 2 ? 45 : -35); voice(NOTE(m) * Math.pow(2, det / 1200), 0.38, w); w += 0.42; });
+  await sleep(w * 1000 + 300);
+  await talk([
+    ['Yara', '…Hattan. You\'re still VERY off tune. 😭'],
+    ['Hattan', 'I trained like Naruto for a whole year. Believe it!'],
+    ['Yara', 'Keep repeating after me until you match my notes perfectly.'],
+    ['Hattan', 'Ok i will try. Oh, and the Committee left this in my fridge. 🎻']
+  ]);
+  collectString('E');
+  art.innerHTML = scene(violinSVG(4));
+  await talk([
+    ['', 'All 4 strings! But they\'re badly out of tune, and there\'s no tuner. A professional doesn\'t need one. Right?'],
+    ['', 'Tune each string to within 3 cents. "Together" plays both notes at once, so you can hear the beats slow down as you get close.']
+  ]);
+  await tuneGame();
+  art.innerHTML = scene(`<div class="big">✨</div>${violinSVG(4, 100)}<div class="big">✨</div>`);
+  await talk([
+    ['', '✨ The violin glows like an anime power-up scene. ✨'],
+    ['', 'Now the real challenge: teaching Hattan. After a year of lessons he\'s only slightly wrong: 20 to 35 cents off, on one note out of eight.'],
+    ['', 'Yara plays 8 notes, Hattan sings them back. Find his wrong note. 3 out of 4 to pass.']
+  ]);
+  await quiz({ title: 'Pitch detective 🔎', sub: 'Which note was off?', rounds: 4, need: 3, options: ['1', '2', '3', '4', '5', '6', '7', '8'], cols: 4, makeQ: detectiveQ, judge: 'Hattan' });
+  art.innerHTML = scene(`<div class="pair">${yara({ w: 110, violin: true })}${HATTAN(120)}</div>`);
+  await talk([
+    ['Hattan', 'You\'re not a Barbie. You\'re a whole conservatoire.'],
+    ['Hattan', 'Here. My birthday present to you. 🎟️']
+  ]);
+  await giveGift('voucher');
+  await say('Yara', 'Wow. Thanks. Hehe.');
+}
+
+async function pony(){
+  await enterWorld(5, 'pony', '🦄', 'Pony Land', 'A My Little Pony–style world. Rarity lives here. Everything is fabulous.', '🦄 Pony Land');
+  art.innerHTML = scene(`<div class="big">🦄</div>${yara({ w: 120 })}`);
+  await talk([
+    ['', 'Everything is pastel. Everyone stops and stares at The Hair.'],
+    ['', 'A white pony with dark purple hair gasps. It\'s RARITY.'],
+    ['Yara', 'My favourite pony. Ever. 😭'],
+    ['Rarity', 'DARLING. That hair. It deserves couture. It deserves… a BOW.'],
+    ['', 'A rainbow pony zooms past at about 300 BPM, then zooms past again at 60.'],
+    ['Rarity', 'Ignore her. My sewing machine only works if someone keeps a perfect beat. Can you, darling?']
+  ]);
+  await rhythm('Couture sewing machine 🧵', 'Keep Rarity\'s machine stitching in time.', 'Rarity');
+  art.innerHTML = scene(`<div class="big">🦄✨</div>${hamster({ w: 130, bow: true })}`);
+  await talk([['Rarity', 'Simply FABULOUS. Hold still, darling.'], ['', 'The bow is enormous. It matches the hair perfectly.']]);
+  await giveGift('bow');
+  art.innerHTML = scene(`<div class="big">🦄✨</div>${yara({ w: 130 })}`);
+  await say('Yara', 'I look AMAZING. 😭');
+}
+
+async function jazz(){
+  await enterWorld(6, 'jazz', '🎷', 'The Jazz Club', 'La La Land after dark: a city of stars, a jukebox stuck on Frank Sinatra.', '🎷 Jazz Club');
+  art.innerHTML = scene(`<div class="big">🐈‍⬛🎹</div>${yara({ w: 110 })}`);
+  await talk([
+    ['', 'A tiny jazz club. Dim lights, a jukebox stuck on Frank Sinatra, and at the piano… a cat.'],
+    ['', 'THE cat. The one from this morning. He didn\'t do absolutely nothing after all. He plays jazz.'],
+    ['Jazz cat', 'Mrrow. I mean: welcome. I hear you wish you were a cat. Understandable.'],
+    ['Jazz cat', 'Nobody touches my piano without passing my ears test. Intervals first: 5 out of 6.']
+  ]);
+  await quiz({ title: 'Intervals 🎼', sub: 'Name the interval', rounds: 6, need: 5, options: INTERVALS, cols: 4, makeQ: intervalQ, judge: 'Jazz cat' });
+  art.innerHTML = scene(`<div class="big">🐈‍⬛🎹</div>${yara({ w: 110 })}`);
+  await say('Jazz cat', 'Not bad. Now chords. Jazz chords, obviously. 4 out of 5.');
+  await quiz({ title: 'Chords 🎹', sub: 'Name the chord', rounds: 5, need: 4, options: CHORDS.map(c => c[0]), cols: 3, makeQ: chordQ, judge: 'Jazz cat' });
+  art.innerHTML = scene(`<div class="big">🐈‍⬛</div>${yara({ w: 110, violin: true })}`);
+  await talk([
+    ['Jazz cat', 'You did it your way. Sinatra would approve. 🎷'],
+    ['Jazz cat', 'I heard you always wanted a piano at home, so you could play every day.'],
+    ['Jazz cat', 'Take mine. I\'m a cat. I can\'t even reach the pedals.']
+  ]);
+  await giveGift('piano');
+  await say('Yara', 'WAIT. For me?? To KEEP?? 😭😭😭');
+}
+
+async function eras(){
+  await enterWorld(7, 'eras', '✨', 'The Eras Stage', 'Taylor\'s on tour, but the stage is holding auditions.', '✨ Eras Stage');
+  art.innerHTML = scene(`<div class="pair">${yara({ w: 100 })}${HATTAN(115, true)}</div>`);
+  await talk([
+    ['', 'A huge stage covered in glitter. Taylor\'s away on tour, but the crew is holding auditions for backing singers.'],
+    ['', 'Guess who\'s in the queue, in sequins.'],
+    ['Hattan', 'I know someone with a master\'s in Taylor\'s music. So I\'m basically qualified.'],
+    ['Yara', 'You\'re basically NOT.'],
+    ['Stage manager', 'Hi! The band needs his audition written down. Can you transcribe it? He\'ll sing it, the first note is C.']
+  ]);
+  await dictation('Stage manager');
+  art.innerHTML = scene(`<div class="pair">${yara({ w: 100 })}${HATTAN(115)}</div>`);
+  await talk([
+    ['Hattan', 'So? Did I get in??'],
+    ['Stage manager', 'No.'],
+    ['Yara', 'Hehe.'],
+    ['Stage manager', 'But YOU get this. Every Eras fan needs one.']
+  ]);
+  await giveGift('bracelet');
+  await talk([['Yara', 'Will they play Enchanted tonight?'], ['Stage manager', 'Every single night. 💜']]);
+}
+
+async function lawn(){
+  await enterWorld(0, 'lawn', '🌻', 'La La Lawn', 'The final stop. Everyone is waiting.', '🌻 La La Lawn', 'Finale');
+  art.innerHTML = fieldHTML();
+  VOICE.arm = true;
+  await talk([
+    ['', 'Welcome to La La Lawn: a field of sunflowers that never die, right next to a beach. 🌻🌊'],
+    ['', '(Unlike the last sunflower. Sorry about that one.)'],
+    ['Yara', 'A beach?? Bruh. I don\'t tan. I get CRISPED. 🔥'],
+    ['', 'True. Last beach trip she came home medium-rare. The hair was the only part that survived.'],
+    ['', 'That\'s why this beach only opens at night. 🌙 She can sit by it as long as she wants.'],
+    ['Yara', '…okay that\'s actually perfect.']
+  ]);
+  await say('', 'Each sunflower sings one note. Play the first line of Happy Birthday on them, by ear. No labels. 🙂');
+  info('🌻 Play "Happy birthday to you" (first line) on the flowers.');
+  await bloomGame();
+  await say('', 'The field hums softly, a bit like her favourite 2020 Adrianne Lenker album.');
+  art.querySelector('.cabin').classList.add('show');
+  /* a soft, original fingerpicked pattern (not the song) to set the mood */
+  [[50, 57, 62, 66], [47, 54, 59, 62], [43, 50, 55, 59], [45, 52, 57, 61]].forEach((ch, i) => ch.forEach((n, j) => pluck(NOTE(n), 0.07, i * 0.9 + j * 0.18)));
+  await say('', 'At the edge of the field sits a little wooden cabin with one warm window, the kind of place you could record a whole album on tape.');
+  if(VOICE.ok){
+    await say('', 'Something is waiting behind that window. Just for her. 💛');
+    await listenAtWindow();
+  }
+  art.querySelector('.piano').classList.add('show'); sparkle();
+  const row = [...art.querySelectorAll('#giftrow span')];
+  for(let i = 0; i < row.length; i++){ await sleep(220); row[i].classList.add('in'); pluck(NOTE(72 + i * 2), 0.12); }
+  await talk([
+    ['', 'All seven gifts are here. Belle got a whole library. Yara got a whole field.'],
+    ['', 'Then the gifts start to glow, one by one…']
+  ]);
+  const REVEAL = [
+    ['brush', '🖌️ Bob Ross\'s talent', 'Turning a blank canvas into something beautiful. It was never in the brush. She does it every time she picks up her violin.'],
+    ['lantern', '🏮 Rapunzel\'s hard work', 'Two hundred things a day and still dreaming. Teaching, practising, studying. That was never Rapunzel\'s. It\'s hers.'],
+    ['scale', '🐉 Astrid\'s courage', 'Jumping into the unknown with tiny wings and enormous hair. She did it seven times today. She does it all the time.'],
+    ['bow', '🎀 Rarity\'s flamboyance', 'The sparkle, the drama, the "DARLING." Rarity didn\'t give her that. She was born fabulous.'],
+    ['piano', '🎹 A La La Land dreamer\'s heart', 'The stubborn hope of every dreamer in her favourite film. The piano is just where she\'ll keep it.'],
+    ['bracelet', '📿 A brand-new era', 'Every birthday starts a new era. This one is hers to write.'],
+    ['voucher', '🎟️ Hattan\'s love', 'The voucher was never for a song. It\'s for something that doesn\'t expire: Hattan\'s love. Off-key, but always on time.']
+  ];
+  const hero = art.querySelector('.heroic svg');
+  for(let i = 0; i < REVEAL.length; i++){
+    const [k, title, line] = REVEAL[i];
+    const el = k === 'piano' ? art.querySelector('.piano') : art.querySelector(`#giftrow [data-k="${k}"]`);
+    el.classList.add('glow'); sparkle();
+    await say(title, line);
+    el.classList.remove('glow'); el.classList.add('gone');
+    pluck(NOTE([67, 69, 71, 72, 74, 76, 79][i]), 0.2);
+    hero.style.filter = `drop-shadow(0 0 ${4 + i * 3}px rgba(255,216,74,.95))`;
+    await sleep(500);
+  }
+  art.querySelector('.piano').classList.remove('gone');
+  await talk([
+    ['', 'None of it was ever hidden in other worlds. It was in her all along. 🌻'],
+    ['', 'And the Birthday Committee? It was everyone she met today. They\'ve all come to say it together…']
+  ]);
+  if(state.skips > 0) await say('', `(They are also gossiping about the ${state.skips} skip${state.skips > 1 ? 's' : ''}. Lovingly.)`);
+  info('🎻 🎂 🎻');
+  art.querySelectorAll('.flower').forEach(f => f.classList.add('dance'));
+  confetti(8);
+  await playHappyBirthday();
+  const cabinIcon = '<svg width="22" height="20" viewBox="0 0 64 56" style="vertical-align:-4px"><rect x="8" y="24" width="48" height="30" fill="#8a5a32"/><polygon points="2,26 32,4 62,26" fill="#5a3b22"/><rect class="win" x="16" y="30" width="14" height="12" fill="#ffd56b"/></svg>';
+  const wrap = document.createElement('div'); wrap.className = 'cardwrap';
+  wrap.innerHTML = `<div class="card"><div class="cardtop">🌻🎻🍊🪽🎀</div><h2>Happy Birthday, Yara!</h2><p id="msg"></p><div class="sig">Yours lovingly,<br>${FROM}.</div>
+    <div class="row" style="margin-top:8px">${VOICE.ok ? `<button class="btn sm alt" id="voiceBtn">${cabinIcon} <span>▶️ Listen again</span></button>` : ''}<button class="btn sm" id="again2">🔁 Play again</button></div></div>`;
+  art.querySelector('.field').appendChild(wrap);
+  $('#msg').innerHTML = FINAL_MESSAGE.split(/\n\s*\n/).map(x => x.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))).join('<span style="display:block;height:7px"></span>');
+  $('#boxwrap').style.display = 'none';
+  confetti(4);
+  const cabin = art.querySelector('.cabin');
+  if(VOICE.ok){
+    const a = VOICE.el, vb = $('#voiceBtn'), lab = vb.querySelector('span');
+    const playing = on => { cabin.classList.toggle('talking', on); vb.classList.toggle('live', on); lab.textContent = on ? '⏸️ Pause' : '▶️ Listen again'; };
+    a.onplay = () => playing(true); a.onpause = () => playing(false); a.onended = () => { playing(false); a.currentTime = 0; };
+    vb.onclick = () => { if(a.paused){ a.muted = MUTED; a.play().catch(() => {}); } else a.pause(); };
+    playing(false);
+  }
+  await new Promise(r => { $('#again2').onclick = () => { blip(); r(); }; });
+  if(VOICE.el){ try{ VOICE.el.pause(); VOICE.el.currentTime = 0; }catch(e){} }
+  VOICE.arm = false;
+  $('#boxwrap').style.display = '';
+}
+
+const CHAPTERS = [prologue, painting, tower, berk, kitchen, pony, jazz, eras, lawn];
+const CH_NAMES = ['The Burrow', 'The Painting', 'The Tower', 'Berk', 'The Kitchen', 'Pony Land', 'The Jazz Club', 'The Eras Stage', 'La La Lawn'];
+const REWARDS = [null, { s: 'G', g: 'brush' }, { s: 'D', g: 'lantern' }, { s: 'A', g: 'scale' }, { s: 'E', g: 'voucher' }, { g: 'bow' }, { g: 'piano' }, { g: 'bracelet' }, null];
+
+async function main(){
+  while(true){
+    state.skips = 0; state.gifts = []; state.strings = []; state.sugar = 0;
+    document.querySelectorAll('#strings b').forEach(b => b.classList.remove('on'));
+    updateBag();
+    const sv = load();
+    const start = await titleScreen(sv);
+    if(start > 0){
+      state.sugar = sv.sugar || 0; state.skips = sv.skips || 0;
+      for(let i = 0; i < start; i++){ const r = REWARDS[i]; if(r){ if(r.s) markString(r.s); if(r.g && !has(r.g)) state.gifts.push(r.g); } }
+      updateBag();
+    }
+    for(let i = start; i < CHAPTERS.length; i++){
+      await CHAPTERS[i]();
+      save(i + 1 < CHAPTERS.length ? i + 1 : 0);
+    }
+  }
+}
+main();
+</script>
+</body>
+</html>
